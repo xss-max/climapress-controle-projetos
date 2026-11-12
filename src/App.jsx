@@ -126,6 +126,34 @@ const UserPlus = ({ className = "w-4 h-4" }) => (
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>
   </svg>
 );
+const EyeOff = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>
+  </svg>
+);
+const Key = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>
+  </svg>
+);
+const LogOut = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+  </svg>
+);
+const Copy = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+  </svg>
+);
+
+// --- HELPER: GERAÇÃO DE SENHA SEGURA CORPORATIVA (8 CARACTERES ALFANUMÉRICO + SÍMBOLO) ---
+const generateSecurePassword = (prefix = "Clima") => {
+  const specialChars = ["@", "#", "$", "*", "!"];
+  const randomSpecial = specialChars[Math.floor(Math.random() * specialChars.length)];
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
+  return `${prefix}${randomSpecial}${randomNum}`;
+};
 
 // --- LOGO COMPONENT (IDENTIDADE OFICIAL CLIMAPRESS DA IMAGEM) ---
 const ClimapressLogo = ({ className = "h-10 w-auto" }) => (
@@ -157,7 +185,7 @@ const ClimapressLogo = ({ className = "h-10 w-auto" }) => (
   </svg>
 );
 
-// --- INITIAL DATA: EQUIPE LIMPA COM APENAS O COORDENADOR RESPONSÁVEL ---
+// --- INITIAL DATA: EQUIPE ESTATÍSTICA COM TODOS OS NÍVEIS DE GERENCIAMENTO ---
 const INITIAL_EQUIPE = [
   {
     id: 1,
@@ -166,30 +194,339 @@ const INITIAL_EQUIPE = [
     fone: "(11) 98765-4321",
     role: "Coordenador",
     senha: "123"
+  },
+  {
+    id: 2,
+    nome: "Lucas Gabriel da Silva",
+    email: "lucas.silva@climapress.com.br",
+    fone: "(11) 97123-4567",
+    role: "Colaborador",
+    senha: "123"
+  },
+  {
+    id: 3,
+    nome: "Carlos Eduardo Santos",
+    email: "carlos.santos@climapress.com.br",
+    fone: "(11) 98234-5678",
+    role: "Colaborador",
+    senha: "123"
+  },
+  {
+    id: 4,
+    nome: "Dra. Mariana Costa Mendes",
+    email: "mariana.costa@climapress.com.br",
+    fone: "(11) 99345-6789",
+    role: "Visualizador",
+    senha: "123"
   }
 ];
 
-// --- INITIAL DATA: OBRAS & TAREFAS ZERADAS PARA PRODUÇÃO ---
-const INITIAL_OBRAS = [];
-const INITIAL_ACTIVITIES_LIST = [];
-const INITIAL_TIME_ENTRIES = [];
+// --- INITIAL DATA: OBRAS FICTÍCIAS REALISTAS PARA TESTES E DEMONSTRAÇÃO ---
+const INITIAL_OBRAS = [
+  {
+    id: 1,
+    nome: "Sede Corporativa Nubank",
+    cliente: "Nubank S.A.",
+    status: "Ativa"
+  },
+  {
+    id: 2,
+    nome: "Hospital Sírio-Libanês - Bloco E",
+    cliente: "Sociedade Beneficente Sírio-Libanês",
+    status: "Ativa"
+  },
+  {
+    id: 3,
+    nome: "Data Center Santander",
+    cliente: "Banco Santander Brasil",
+    status: "Ativa"
+  }
+];
+
+const INITIAL_ACTIVITIES_LIST = [
+  {
+    id: 1,
+    obraNome: "Sede Corporativa Nubank",
+    atividade: "COMPATIBILIZAÇÃO BIM E MEMORIAL DE CÁLCULO VRF",
+    fase: "Projetos",
+    dias: 10,
+    resp1: "Lucas Gabriel da Silva",
+    resp2: "Engº Murilo Miranda da Silva",
+    resp3: "",
+    percentual: 100,
+    isNA: false,
+    inicioPrevisto: "2026-11-02",
+    terminoPrevisto: "2026-11-12",
+    lastUpdated: "2026-11-12"
+  },
+  {
+    id: 2,
+    obraNome: "Sede Corporativa Nubank",
+    atividade: "INSTALAÇÃO DE REDE FRIGORÍFICA E DRENO - 8º ANDAR",
+    fase: "Tubulação Frigorífica",
+    dias: 15,
+    resp1: "Carlos Eduardo Santos",
+    resp2: "Lucas Gabriel da Silva",
+    resp3: "",
+    percentual: 60,
+    isNA: false,
+    inicioPrevisto: "2026-11-10",
+    terminoPrevisto: "2026-11-25",
+    lastUpdated: "2026-11-12"
+  },
+  {
+    id: 3,
+    obraNome: "Sede Corporativa Nubank",
+    atividade: "MONTAGEM DE DUTOS DE AR E DIFUSORES DE ALTA VAZÃO",
+    fase: "Dutos e Difusores",
+    dias: 12,
+    resp1: "Carlos Eduardo Santos",
+    resp2: "",
+    resp3: "",
+    percentual: 25,
+    isNA: false,
+    inicioPrevisto: "2026-11-15",
+    terminoPrevisto: "2026-11-27",
+    lastUpdated: "2026-11-12"
+  },
+  {
+    id: 4,
+    obraNome: "Sede Corporativa Nubank",
+    atividade: "TESTE DE ESTANQUEIDADE COM NITROGÊNIO E VÁCUO",
+    fase: "Infraestrutura",
+    dias: 5,
+    resp1: "Carlos Eduardo Santos",
+    resp2: "Engº Murilo Miranda da Silva",
+    resp3: "",
+    percentual: 0,
+    isNA: false,
+    inicioPrevisto: "2026-11-25",
+    terminoPrevisto: "2026-11-30",
+    lastUpdated: "2026-11-10"
+  },
+  {
+    id: 5,
+    obraNome: "Hospital Sírio-Libanês - Bloco E",
+    atividade: "PROJETO EXECUTIVO DE FILTRAGEM HEPA PARA UTI",
+    fase: "Projetos",
+    dias: 14,
+    resp1: "Lucas Gabriel da Silva",
+    resp2: "Engº Murilo Miranda da Silva",
+    resp3: "",
+    percentual: 100,
+    isNA: false,
+    inicioPrevisto: "2026-11-01",
+    terminoPrevisto: "2026-11-15",
+    lastUpdated: "2026-11-12"
+  },
+  {
+    id: 6,
+    obraNome: "Hospital Sírio-Libanês - Bloco E",
+    atividade: "MONTAGEM DE FANCOILS COM VÁLVULAS DE PRESSÃO CONTROLADA",
+    fase: "Infraestrutura",
+    dias: 18,
+    resp1: "Carlos Eduardo Santos",
+    resp2: "Lucas Gabriel da Silva",
+    resp3: "",
+    percentual: 40,
+    isNA: false,
+    inicioPrevisto: "2026-11-12",
+    terminoPrevisto: "2026-11-30",
+    lastUpdated: "2026-11-12"
+  },
+  {
+    id: 7,
+    obraNome: "Hospital Sírio-Libanês - Bloco E",
+    atividade: "COMISSIONAMENTO, BALANCEAMENTO TAB E LAUDO ANVISA",
+    fase: "Comissionamento",
+    dias: 8,
+    resp1: "Engº Murilo Miranda da Silva",
+    resp2: "Lucas Gabriel da Silva",
+    resp3: "",
+    percentual: 0,
+    isNA: false,
+    inicioPrevisto: "2026-12-01",
+    terminoPrevisto: "2026-12-08",
+    lastUpdated: "2026-11-10"
+  },
+  {
+    id: 8,
+    obraNome: "Data Center Santander",
+    atividade: "INFRAESTRUTURA DE ÁGUA GELADA (CHILLERS DE PRECISÃO)",
+    fase: "Tubulação Frigorífica",
+    dias: 20,
+    resp1: "Carlos Eduardo Santos",
+    resp2: "Engº Murilo Miranda da Silva",
+    resp3: "",
+    percentual: 80,
+    isNA: false,
+    inicioPrevisto: "2026-11-05",
+    terminoPrevisto: "2026-11-25",
+    lastUpdated: "2026-11-12"
+  },
+  {
+    id: 9,
+    obraNome: "Data Center Santander",
+    atividade: "INTERLIGAÇÃO DO SISTEMA DE AUTOMAÇÃO BMS E SENSORES",
+    fase: "Elétrica e Automação",
+    dias: 10,
+    resp1: "Lucas Gabriel da Silva",
+    resp2: "",
+    resp3: "",
+    percentual: 30,
+    isNA: false,
+    inicioPrevisto: "2026-11-18",
+    terminoPrevisto: "2026-11-28",
+    lastUpdated: "2026-11-12"
+  }
+];
+
+const INITIAL_TIME_ENTRIES = [
+  {
+    id: 101,
+    colaboradorId: 2,
+    colaboradorNome: "Lucas Gabriel da Silva",
+    obraNome: "Sede Corporativa Nubank",
+    atividadeNome: "COMPATIBILIZAÇÃO BIM E MEMORIAL DE CÁLCULO VRF",
+    data: "2026-11-10",
+    horaInicio: "08:00",
+    horaFim: "18:00",
+    intervaloMin: 60,
+    totalHoras: 9,
+    descricao: "Finalização do modelo 3D no Revit e compatibilização com vigas estruturais.",
+    status: "Confirmado"
+  },
+  {
+    id: 102,
+    colaboradorId: 3,
+    colaboradorNome: "Carlos Eduardo Santos",
+    obraNome: "Sede Corporativa Nubank",
+    atividadeNome: "INSTALAÇÃO DE REDE FRIGORÍFICA E DRENO - 8º ANDAR",
+    data: "2026-11-11",
+    horaInicio: "07:30",
+    horaFim: "17:30",
+    intervaloMin: 60,
+    totalHoras: 9,
+    descricao: "Brasagem de tubulações de cobre 1.1/8 e isolamento elastomérico Armaflex.",
+    status: "Confirmado"
+  },
+  {
+    id: 103,
+    colaboradorId: 3,
+    colaboradorNome: "Carlos Eduardo Santos",
+    obraNome: "Hospital Sírio-Libanês - Bloco E",
+    atividadeNome: "MONTAGEM DE FANCOILS COM VÁLVULAS DE PRESSÃO CONTROLADA",
+    data: "2026-11-11",
+    horaInicio: "08:00",
+    horaFim: "16:30",
+    intervaloMin: 60,
+    totalHoras: 7.5,
+    descricao: "Içamento dos módulos de fancoil no teto técnico e instalação de coxins antivibratórios.",
+    status: "Confirmado"
+  },
+  {
+    id: 104,
+    colaboradorId: 3,
+    colaboradorNome: "Carlos Eduardo Santos",
+    obraNome: "Data Center Santander",
+    atividadeNome: "INFRAESTRUTURA DE ÁGUA GELADA (CHILLERS DE PRECISÃO)",
+    data: "2026-11-09",
+    horaInicio: "08:00",
+    horaFim: "18:00",
+    intervaloMin: 60,
+    totalHoras: 9,
+    descricao: "Montagem de suportes unistrut e solda em flanges de 4 polegadas.",
+    status: "Confirmado"
+  },
+  {
+    id: 105,
+    colaboradorId: 2,
+    colaboradorNome: "Lucas Gabriel da Silva",
+    obraNome: "Data Center Santander",
+    atividadeNome: "INTERLIGAÇÃO DO SISTEMA DE AUTOMAÇÃO BMS E SENSORES",
+    data: "2026-11-11",
+    horaInicio: "09:00",
+    horaFim: "18:00",
+    intervaloMin: 60,
+    totalHoras: 8,
+    descricao: "Passagem de cabo Modbus e configuração de transdutores de pressão diferencial.",
+    status: "Confirmado"
+  }
+];
+
+// --- LOCALSTORAGE SAFE HELPERS (BUG-02 RESOLUTION) ---
+const loadStorage = (key, fallback) => {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (err) {
+    console.warn(`Erro ao carregar do localStorage (${key}):`, err);
+    return fallback;
+  }
+};
 
 export default function App() {
-  // Global States
-  const [equipe, setEquipe] = useState(INITIAL_EQUIPE);
-  const [currentUser, setCurrentUser] = useState(INITIAL_EQUIPE[0]); // Murilo Miranda (Coord)
+  // Global States com Persistência em LocalStorage (BUG-02)
+  const [equipe, setEquipe] = useState(() => loadStorage("climapress_equipe", INITIAL_EQUIPE));
+  const [currentUser, setCurrentUser] = useState(() => loadStorage("climapress_current_user", INITIAL_EQUIPE[0]));
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [currentTab, setCurrentTab] = useState("dashboard"); // dashboard | minhas | gestao_obras | gestao_tarefas | horas | matriz | gantt | meu_perfil
-  const [obras, setObras] = useState(INITIAL_OBRAS);
-  const [atividades, setAtividades] = useState(INITIAL_ACTIVITIES_LIST);
-  const [bancoHoras, setBancoHoras] = useState(INITIAL_TIME_ENTRIES);
+  const [obras, setObras] = useState(() => loadStorage("climapress_obras", INITIAL_OBRAS));
+  const [atividades, setAtividades] = useState(() => loadStorage("climapress_atividades", INITIAL_ACTIVITIES_LIST));
+  const [bancoHoras, setBancoHoras] = useState(() => loadStorage("climapress_banco_horas", INITIAL_TIME_ENTRIES));
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogs, setAuditLogs] = useState(() => loadStorage("climapress_audit_logs", []));
+
+  // Sync to LocalStorage effects
+  useEffect(() => {
+    try { window.localStorage.setItem("climapress_equipe", JSON.stringify(equipe)); } catch (e) {}
+  }, [equipe]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("climapress_current_user", JSON.stringify(currentUser)); } catch (e) {}
+  }, [currentUser]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("climapress_obras", JSON.stringify(obras)); } catch (e) {}
+  }, [obras]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("climapress_atividades", JSON.stringify(atividades)); } catch (e) {}
+  }, [atividades]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("climapress_banco_horas", JSON.stringify(bancoHoras)); } catch (e) {}
+  }, [bancoHoras]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("climapress_audit_logs", JSON.stringify(auditLogs)); } catch (e) {}
+  }, [auditLogs]);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginSenha, setLoginSenha] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [showLoginPass, setShowLoginPass] = useState(false);
+
+  // Profile password renewal modal (Renovação com confirmação e validação de senha atual)
+  const [isProfilePassModalOpen, setIsProfilePassModalOpen] = useState(false);
+  const [currentProfilePassword, setCurrentProfilePassword] = useState("");
+  const [newProfilePassword, setNewProfilePassword] = useState("");
+  const [confirmProfilePassword, setConfirmProfilePassword] = useState("");
+  const [profilePassError, setProfilePassError] = useState("");
+  const [showProfileCurrentPass, setShowProfileCurrentPass] = useState(false);
+  const [showProfileNewPass, setShowProfileNewPass] = useState(false);
+
+  // Coordinator reset user password modal (Geração e renovação forçada pelo Coordenador)
+  const [isResetUserPassModalOpen, setIsResetUserPassModalOpen] = useState(false);
+  const [userToResetPass, setUserToResetPass] = useState(null);
+  const [tempGeneratedPass, setTempGeneratedPass] = useState("");
+  const [showTempResetPass, setShowTempResetPass] = useState(true);
+
+  // Visibility toggles for create/invite modals
+  const [showInvitePass, setShowInvitePass] = useState(false);
+  const [showUserPass, setShowUserPass] = useState(false);
 
   // Feedback notifications
   const [feedbackMsg, setFeedbackMsg] = useState("");
@@ -198,7 +535,41 @@ export default function App() {
   const [raioXObra, setRaioXObra] = useState("Todas");
   const [resumoCardFilter, setResumoCardFilter] = useState("todos");
   const [minhasAtividadesObraFilter, setMinhasAtividadesObraFilter] = useState("Todas");
-  const [taskManagerObra, setTaskManagerObra] = useState("Nubank");
+  const [taskManagerObra, setTaskManagerObra] = useState(() => {
+    const loaded = loadStorage("climapress_obras", INITIAL_OBRAS);
+    return loaded[0]?.nome || "Sede Corporativa Nubank";
+  });
+
+  // Sincronização automática de taskManagerObra (BUG-01)
+  useEffect(() => {
+    if (obras.length > 0 && !obras.some(o => o.nome === taskManagerObra)) {
+      setTaskManagerObra(obras[0].nome);
+    }
+  }, [obras, taskManagerObra]);
+
+  // Helper para restaurar base de dados inicial para testes
+  const handleResetToDemo = () => {
+    if (window.confirm("Deseja restaurar toda a base de dados para o padrão de testes da Climapress? Todos os apontamentos e obras voltarão ao modelo original.")) {
+      try {
+        window.localStorage.removeItem("climapress_equipe");
+        window.localStorage.removeItem("climapress_current_user");
+        window.localStorage.removeItem("climapress_obras");
+        window.localStorage.removeItem("climapress_atividades");
+        window.localStorage.removeItem("climapress_banco_horas");
+        window.localStorage.removeItem("climapress_audit_logs");
+      } catch (e) {}
+      setEquipe(INITIAL_EQUIPE);
+      setCurrentUser(INITIAL_EQUIPE[0]);
+      setObras(INITIAL_OBRAS);
+      setAtividades(INITIAL_ACTIVITIES_LIST);
+      setBancoHoras(INITIAL_TIME_ENTRIES);
+      setAuditLogs([]);
+      setTaskManagerObra(INITIAL_OBRAS[0]?.nome || "");
+      setRaioXObra("Todas");
+      setMinhasAtividadesObraFilter("Todas");
+      showFeedback("Base de dados restaurada para o padrão oficial de demonstração!");
+    }
+  };
 
   // Gantt specific controls
   const [ganttObraFilter, setGanttObraFilter] = useState("Todas");
@@ -271,10 +642,6 @@ export default function App() {
     intervaloMin: 60,
     descricao: ""
   });
-
-  // Profile password modal
-  const [isProfilePassModalOpen, setIsProfilePassModalOpen] = useState(false);
-  const [newProfilePassword, setNewProfilePassword] = useState("");
 
   // Role booleans
   const isCoordinator = currentUser?.role === "Coordenador";
@@ -381,6 +748,91 @@ export default function App() {
     };
   }, [raioXObra, obrasStats]);
 
+  // --- AUTENTICAÇÃO, LOGIN & GESTÃO DE SENHAS ---
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    setLoginError("");
+    const emailNorm = loginEmail.trim().toLowerCase();
+    const user = equipe.find(u => u.email.toLowerCase() === emailNorm);
+    if (!user) {
+      setLoginError("E-mail não cadastrado na equipe da Climapress.");
+      return;
+    }
+    if (user.senha !== loginSenha) {
+      setLoginError("Senha incorreta. Verifique suas credenciais de acesso.");
+      return;
+    }
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    setLoginSenha("");
+    showFeedback(`Bem-vindo, ${user.nome}! Sessão iniciada como ${user.role}.`);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setLoginEmail(currentUser?.email || "");
+    setLoginSenha("");
+    setLoginError("");
+    showFeedback("Sessão encerrada com sucesso.");
+  };
+
+  // Coordenador gera e reseta senha temporária para membro da equipe
+  const handleOpenResetUserPassword = (colab) => {
+    setUserToResetPass(colab);
+    setTempGeneratedPass(generateSecurePassword("Clima"));
+    setShowTempResetPass(true);
+    setIsResetUserPassModalOpen(true);
+  };
+
+  const handleConfirmResetUserPassword = (e) => {
+    e.preventDefault();
+    if (!userToResetPass || !tempGeneratedPass.trim()) return;
+
+    const trimmed = tempGeneratedPass.trim();
+    setEquipe(prev =>
+      prev.map(u => (u.id === userToResetPass.id ? { ...u, senha: trimmed } : u))
+    );
+    if (currentUser?.id === userToResetPass.id) {
+      setCurrentUser(prev => ({ ...prev, senha: trimmed }));
+    }
+    showFeedback(`Nova senha gerada e gravada para ${userToResetPass.nome}: "${trimmed}"`);
+    setIsResetUserPassModalOpen(false);
+    setUserToResetPass(null);
+  };
+
+  // Renovação de senha pelo próprio usuário no Perfil
+  const handleSaveProfilePassword = (e) => {
+    e.preventDefault();
+    setProfilePassError("");
+
+    if (currentProfilePassword !== currentUser?.senha) {
+      setProfilePassError("Senha atual incorreta.");
+      return;
+    }
+
+    if (newProfilePassword.length < 6) {
+      setProfilePassError("A nova senha deve possuir no mínimo 6 caracteres.");
+      return;
+    }
+
+    if (newProfilePassword !== confirmProfilePassword) {
+      setProfilePassError("A confirmação da nova senha não confere.");
+      return;
+    }
+
+    const trimmed = newProfilePassword.trim();
+    setEquipe(prev =>
+      prev.map(u => (u.id === currentUser?.id ? { ...u, senha: trimmed } : u))
+    );
+    setCurrentUser(prev => ({ ...prev, senha: trimmed }));
+    showFeedback("Sua senha foi renovada com sucesso!");
+    setIsProfilePassModalOpen(false);
+    setCurrentProfilePassword("");
+    setNewProfilePassword("");
+    setConfirmProfilePassword("");
+    setProfilePassError("");
+  };
+
   // Save or Edit User in Equipe (Liberado apenas para Coordenadores)
   const handleSaveUser = (e) => {
     e.preventDefault();
@@ -412,6 +864,7 @@ export default function App() {
     setIsUserModalOpen(false);
   };
 
+  // BUG-05 RESOLUTION: Reatribuição automática de tarefas ao excluir usuário
   const confirmDeleteUser = () => {
     if (!userToDelete) return;
     if (userToDelete.id === currentUser?.id) {
@@ -419,8 +872,41 @@ export default function App() {
       setUserToDelete(null);
       return;
     }
+
+    const fallbackCoord = equipe.find(u => u.role === "Coordenador" && u.id !== userToDelete.id)?.nome || "Engº Murilo Miranda da Silva";
+    let reassignedCount = 0;
+
+    setAtividades(prev =>
+      prev.map(a => {
+        let changed = false;
+        let newResp1 = a.resp1;
+        let newResp2 = a.resp2;
+        let newResp3 = a.resp3;
+
+        if (a.resp1 === userToDelete.nome) {
+          newResp1 = fallbackCoord;
+          changed = true;
+          reassignedCount++;
+        }
+        if (a.resp2 === userToDelete.nome) {
+          newResp2 = "";
+          changed = true;
+        }
+        if (a.resp3 === userToDelete.nome) {
+          newResp3 = "";
+          changed = true;
+        }
+
+        return changed ? { ...a, resp1: newResp1, resp2: newResp2, resp3: newResp3 } : a;
+      })
+    );
+
     setEquipe(prev => prev.filter(u => u.id !== userToDelete.id));
-    showFeedback(`Profissional "${userToDelete.nome}" removido da equipe.`);
+    if (reassignedCount > 0) {
+      showFeedback(`Profissional "${userToDelete.nome}" removido. ${reassignedCount} frente(s) sob sua liderança foram reatribuídas para ${fallbackCoord}.`);
+    } else {
+      showFeedback(`Profissional "${userToDelete.nome}" removido da equipe.`);
+    }
     setUserToDelete(null);
   };
 
@@ -510,6 +996,15 @@ export default function App() {
         return a;
       })
     );
+
+    // BUG-06 RESOLUTION: Se a atividade era 100% e foi retrocedida para < 100%, estorna o lançamento automático
+    if (numPerc < 100 && act.percentual === 100) {
+      setBancoHoras(prev =>
+        prev.filter(b => !(b.obraNome === act.obraNome && b.atividadeNome === act.atividade && (b.descricao.includes("Conclusão integral") || b.descricao.includes("Carga total computada na criação"))))
+      );
+      showFeedback(`Progresso ajustado para ${numPerc}%. Horas automáticas de conclusão foram estornadas.`);
+      return;
+    }
 
     // Se completou a atividade diretamente (100%), verifica e computa as horas restantes automaticamente
     if (numPerc === 100) {
@@ -759,14 +1254,12 @@ export default function App() {
     setActiveTaskForTime(null);
   };
 
-  // --- REPORT EXPORTERS (PDF ROBUSTO COM JANELA POPUP E MARCA D'ÁGUA, WORD, EXCEL) ---
+  // --- REPORT EXPORTERS (BUG-04 RESOLUTION: IMPRESSÃO DIRETA SEM BLOQUEIO DE POPUP) ---
   const handleExportPDF = () => {
     try {
-      const printWindow = window.open("", "_blank", "width=1000,height=750");
-      if (!printWindow) {
-        window.print();
-        return;
-      }
+      // Remove iframe residual se existir
+      const oldIframe = document.getElementById("climapress-pdf-iframe");
+      if (oldIframe) oldIframe.remove();
 
       const tableDataRows = atividades.length > 0
         ? atividades.map(a => `
@@ -960,23 +1453,38 @@ export default function App() {
             <span>Sistema desenvolvido sob responsabilidade técnica do <strong>Engº Murilo Miranda da Silva</strong></span>
             <span>Climapress Instalações de Sistemas de Ar condicionado • Documento Oficial</span>
           </div>
-
-          <script>
-            window.onload = function() {
-              window.focus();
-              setTimeout(function() {
-                window.print();
-              }, 400);
-            };
-          </script>
         </body>
         </html>
       `;
 
-      printWindow.document.open();
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      showFeedback("Relatório PDF preparado para impressão e download!");
+      const iframe = document.createElement("iframe");
+      iframe.id = "climapress-pdf-iframe";
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+
+      const frameDoc = iframe.contentWindow.document;
+      frameDoc.open();
+      frameDoc.write(htmlContent);
+      frameDoc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          showFeedback("Relatório PDF preparado para impressão e download!");
+        } catch (e) {
+          window.print();
+        }
+        setTimeout(() => {
+          const toRemove = document.getElementById("climapress-pdf-iframe");
+          if (toRemove) toRemove.remove();
+        }, 3000);
+      }, 400);
     } catch (err) {
       console.error(err);
       window.print();
@@ -1140,6 +1648,121 @@ export default function App() {
     showFeedback(`Convite gerado com sucesso! "${newUser.nome}" agora pode acessar como ${newUser.role}.`);
   };
 
+  // --- TELA DE LOGIN CORPORATIVA (AUTENTICAÇÃO REAL CLIMAPRESS) ---
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#0e243d] flex flex-col justify-center items-center p-4 font-sans relative">
+        {/* Toast Feedback */}
+        {feedbackMsg && (
+          <div className="fixed top-4 right-4 z-50 bg-[#15365C] text-white px-5 py-3 rounded-lg shadow-xl border-l-4 border-[#E52329] flex items-center gap-3 animate-fade-in text-sm font-semibold">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <span>{feedbackMsg}</span>
+          </div>
+        )}
+
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-7 space-y-6 border border-slate-200">
+          <div className="text-center space-y-2">
+            <div className="flex justify-center">
+              <ClimapressLogo className="h-12 w-auto" />
+            </div>
+            <h1 className="text-base font-black text-[#15365C] uppercase tracking-wide">
+              Sistema Integrado de Obras
+            </h1>
+            <p className="text-xs text-slate-500 font-semibold">
+              Controle Físico-Financeiro, Tarefas e Apontamentos HVAC
+            </p>
+          </div>
+
+          {loginError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">E-mail Profissional</label>
+              <input
+                type="email"
+                required
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="seu.nome@climapress.com.br"
+                className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#15365C] focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="font-bold text-slate-700">Senha de Acesso</label>
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPass(!showLoginPass)}
+                  className="text-slate-500 hover:text-[#15365C] flex items-center gap-1 text-[11px] font-semibold"
+                >
+                  {showLoginPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  <span>{showLoginPass ? "Ocultar" : "Mostrar"}</span>
+                </button>
+              </div>
+              <input
+                type={showLoginPass ? "text" : "password"}
+                required
+                value={loginSenha}
+                onChange={(e) => setLoginSenha(e.target.value)}
+                placeholder="Digite sua senha"
+                className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#15365C] focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-[#E52329] hover:bg-red-700 text-white rounded-lg font-black text-sm uppercase tracking-wider transition shadow-md active:scale-98 cursor-pointer"
+            >
+              Acessar Sistema
+            </button>
+          </form>
+
+          {/* Atalho de Acesso Rápido para Testes */}
+          <div className="pt-4 border-t border-slate-100 space-y-2">
+            <span className="text-[10px] font-bold uppercase text-slate-400 block text-center">
+              Acesso Rápido / Simulação de Perfis:
+            </span>
+            <div className="grid grid-cols-1 gap-1.5">
+              {equipe.map(colab => (
+                <button
+                  key={colab.id}
+                  type="button"
+                  onClick={() => {
+                    setCurrentUser(colab);
+                    setIsAuthenticated(true);
+                    showFeedback(`Entrou como: ${colab.nome} (${colab.role})`);
+                  }}
+                  className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 text-left transition"
+                  title="Clique para entrar diretamente com este usuário"
+                >
+                  <div className="truncate">
+                    <span className="font-bold text-xs text-[#15365C] block truncate">{colab.nome}</span>
+                    <span className="text-[10px] text-slate-400 block truncate">{colab.email} • Senha: {colab.senha}</span>
+                  </div>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase flex-shrink-0 ${
+                    colab.role === "Coordenador" ? "bg-amber-100 text-amber-800" : colab.role === "Visualizador" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-[#15365C]"
+                  }`}>
+                    {colab.role}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center text-slate-400 text-[11px] mt-6">
+          © {new Date().getFullYear()} Climapress Instalações • Responsável Técnico: Engº Murilo Miranda da Silva
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col relative print:bg-white">
       {/* MARCA D'ÁGUA EM RELATÓRIOS E IMPRESSÃO (PDF/PRINT) */}
@@ -1178,6 +1801,18 @@ export default function App() {
 
             {/* User profile badge & Global actions */}
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {isCoordinator && (
+                <button
+                  type="button"
+                  onClick={handleResetToDemo}
+                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-700/50 rounded-lg text-xs font-bold transition active:scale-95"
+                  title="Restaurar toda a base de dados para o padrão oficial de demonstração"
+                >
+                  <RefreshCw className="w-3 h-3 text-rose-300" />
+                  <span>Reset Demo</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleGlobalRefresh}
@@ -1226,6 +1861,17 @@ export default function App() {
                   </option>
                 ))}
               </select>
+
+              {/* Botão Encerrar Sessão / Logout */}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-700/80 hover:bg-rose-600 text-white rounded-lg text-xs font-bold transition active:scale-95"
+                title="Encerrar sessão atual e voltar para a tela de login"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sair</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2498,6 +3144,14 @@ export default function App() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
+                            onClick={() => handleOpenResetUserPassword(colab)}
+                            className="p-1 text-amber-600 hover:bg-amber-50 rounded"
+                            title="Gerar / Redefinir Senha deste profissional"
+                          >
+                            <Key className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => {
                               setEditingUser(colab);
                               setUserModalMode("edit");
@@ -2663,31 +3317,55 @@ export default function App() {
                 {atividades
                   .filter(a => ganttObraFilter === "Todas" || a.obraNome === ganttObraFilter)
                   .slice(0, 35)
-                  .map(act => (
-                    <div key={act.id} className="grid grid-cols-12 gap-1 items-center text-xs py-1.5 border-b border-slate-50 hover:bg-slate-50/60 transition">
-                      <div className="col-span-3 truncate font-semibold text-[#15365C]" title={`${act.obraNome}: ${act.atividade} (${act.resp1})`}>
-                        <div className="flex items-center justify-between">
-                          <span className="font-black text-[10px] text-slate-500 uppercase">{act.obraNome}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{(act.dias || 14) * 10}h</span>
+                  .map(act => {
+                    // BUG-03 RESOLUTION: Posicionamento e largura reais baseados no calendário e datas
+                    const timelineStart = new Date("2026-11-02T00:00:00").getTime();
+                    const timelineEnd = new Date("2027-01-03T23:59:59").getTime();
+                    const timelineDuration = timelineEnd - timelineStart;
+
+                    const actStart = act.inicioPrevisto ? new Date(act.inicioPrevisto + "T00:00:00").getTime() : timelineStart;
+                    const actEnd = act.terminoPrevisto ? new Date(act.terminoPrevisto + "T23:59:59").getTime() : (actStart + ((act.dias || 14) * 86400000));
+
+                    const leftPercent = Math.max(0, Math.min(94, ((actStart - timelineStart) / timelineDuration) * 100));
+                    const rawWidth = ((actEnd - actStart) / timelineDuration) * 100;
+                    const widthPercent = Math.max(6, Math.min(100 - leftPercent, rawWidth));
+
+                    return (
+                      <div key={act.id} className="grid grid-cols-12 gap-1 items-center text-xs py-1.5 border-b border-slate-50 hover:bg-slate-50/60 transition">
+                        <div className="col-span-3 truncate font-semibold text-[#15365C]" title={`${act.obraNome}: ${act.atividade} (${act.resp1})`}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-black text-[10px] text-slate-500 uppercase">{act.obraNome}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{(act.dias || 14) * 10}h</span>
+                          </div>
+                          <div className="truncate font-bold">{act.atividade}</div>
+                          <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                            <span>Líder: {act.resp1}</span>
+                            <span className="font-mono text-[9px] text-slate-500">{act.dias} dias</span>
+                          </div>
                         </div>
-                        <div className="truncate font-bold">{act.atividade}</div>
-                        <div className="text-[10px] text-slate-400">Líder: {act.resp1}</div>
-                      </div>
-                      <div className="col-span-9 bg-slate-100 rounded-lg h-6 relative overflow-hidden flex items-center">
-                        <div
-                          className={`h-full rounded-lg transition-all flex items-center justify-end px-2 text-[10px] font-black text-white ${
-                            act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-[#15365C]" : "bg-slate-400"
-                          }`}
-                          style={{
-                            width: `${Math.min(100, Math.max(18, act.percentual))}%`,
-                            marginLeft: `${(act.id % 4) * 7}%`
-                          }}
-                        >
-                          {act.percentual}%
+                        <div className="col-span-9 bg-slate-100 rounded-lg h-7 relative overflow-hidden flex items-center border border-slate-200/50">
+                          <div
+                            className="absolute h-full rounded-md shadow-xs overflow-hidden flex items-center transition-all bg-slate-200"
+                            style={{
+                              left: `${leftPercent}%`,
+                              width: `${widthPercent}%`
+                            }}
+                            title={`${act.atividade} (${act.inicioPrevisto} a ${act.terminoPrevisto}) • Progresso: ${act.percentual}%`}
+                          >
+                            <div
+                              className={`h-full transition-all ${
+                                act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-[#15365C]" : "bg-slate-400"
+                              }`}
+                              style={{ width: `${act.percentual}%` }}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-xs px-1 select-none whitespace-nowrap">
+                              {act.percentual}%
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
           </div>
@@ -2826,13 +3504,34 @@ export default function App() {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Senha Inicial de Acesso</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="font-bold text-slate-700">Senha Inicial de Acesso</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setInviteData(prev => ({ ...prev, senha: generateSecurePassword("Clima") }))}
+                      className="text-emerald-700 hover:text-emerald-800 text-[10px] font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 cursor-pointer"
+                      title="Gerar automaticamente uma senha segura corporativa"
+                    >
+                      <Key className="w-3 h-3 text-emerald-600" />
+                      <span>Gerar Senha Segura</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowInvitePass(!showInvitePass)}
+                      className="text-slate-500 hover:text-[#15365C] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      {showInvitePass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showInvitePass ? "Ocultar" : "Ver"}</span>
+                    </button>
+                  </div>
+                </div>
                 <input
-                  type="password"
+                  type={showInvitePass ? "text" : "password"}
                   value={inviteData.senha}
                   onChange={(e) => setInviteData(prev => ({ ...prev, senha: e.target.value }))}
-                  placeholder="Padrão: 123"
-                  className="w-full p-2.5 border rounded-lg"
+                  placeholder="Ex: Clima@2026"
+                  className="w-full p-2.5 border rounded-lg font-mono text-xs focus:ring-2 focus:ring-[#15365C]"
                 />
               </div>
 
@@ -2926,13 +3625,34 @@ export default function App() {
 
               {userModalMode === "create" && (
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Senha Inicial de Acesso</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="font-bold text-slate-700">Senha Inicial de Acesso</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingUser(prev => ({ ...prev, senha: generateSecurePassword("Clima") }))}
+                        className="text-emerald-700 hover:text-emerald-800 text-[10px] font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 cursor-pointer"
+                        title="Gerar automaticamente uma senha segura corporativa"
+                      >
+                        <Key className="w-3 h-3 text-emerald-600" />
+                        <span>Gerar Senha Segura</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowUserPass(!showUserPass)}
+                        className="text-slate-500 hover:text-[#15365C] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        {showUserPass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        <span>{showUserPass ? "Ocultar" : "Ver"}</span>
+                      </button>
+                    </div>
+                  </div>
                   <input
-                    type="password"
+                    type={showUserPass ? "text" : "password"}
                     value={editingUser.senha}
                     onChange={(e) => setEditingUser(prev => ({ ...prev, senha: e.target.value }))}
-                    placeholder="Padrão: 123"
-                    className="w-full p-2.5 border rounded-lg"
+                    placeholder="Ex: Clima@2026"
+                    className="w-full p-2.5 border rounded-lg font-mono text-xs focus:ring-2 focus:ring-[#15365C]"
                   />
                 </div>
               )}
@@ -3440,58 +4160,215 @@ export default function App() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL: ALTERAR SENHA DO PERFIL                            */}
+      {/* MODAL: REDEFINIR SENHA DE USUÁRIO (COORDENADOR)           */}
       {/* ========================================================= */}
-      {isProfilePassModalOpen && (
+      {isResetUserPassModalOpen && userToResetPass && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-black text-sm text-[#15365C] uppercase flex items-center gap-2">
-                <Lock className="w-4 h-4 text-[#15365C]" />
-                Alterar Minha Senha
+                <Key className="w-4 h-4 text-amber-500" />
+                Redefinir Senha do Profissional
               </h3>
-              <button type="button" onClick={() => setIsProfilePassModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button
+                type="button"
+                onClick={() => setIsResetUserPassModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!newProfilePassword.trim()) return;
-                setEquipe(prev =>
-                  prev.map(u => (u.id === currentUser?.id ? { ...u, senha: newProfilePassword.trim() } : u))
-                );
-                setCurrentUser(prev => ({ ...prev, senha: newProfilePassword.trim() }));
-                showFeedback("Senha alterada com sucesso!");
-                setIsProfilePassModalOpen(false);
-                setNewProfilePassword("");
-              }}
-              className="space-y-4 text-xs"
-            >
+            <p className="text-xs text-slate-600">
+              Você está gerando uma nova credencial de acesso para <strong>{userToResetPass.nome}</strong> ({userToResetPass.email}).
+            </p>
+
+            <form onSubmit={handleConfirmResetUserPassword} className="space-y-4 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Nova Senha de Acesso</label>
-                <input
-                  type="password"
-                  required
-                  value={newProfilePassword}
-                  onChange={(e) => setNewProfilePassword(e.target.value)}
-                  placeholder="Digite sua nova senha"
-                  className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#15365C]"
-                />
+                <div className="flex justify-between items-center mb-1">
+                  <label className="font-bold text-slate-700">Nova Senha Gerada</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTempGeneratedPass(generateSecurePassword("Clima"))}
+                      className="text-blue-700 hover:text-blue-800 text-[10px] font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3 text-blue-600" />
+                      <span>Gerar Outra</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTempResetPass(!showTempResetPass)}
+                      className="text-slate-500 hover:text-[#15365C] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      {showTempResetPass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showTempResetPass ? "Ocultar" : "Ver"}</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type={showTempResetPass ? "text" : "password"}
+                    required
+                    value={tempGeneratedPass}
+                    onChange={(e) => setTempGeneratedPass(e.target.value)}
+                    className="w-full p-2.5 pr-20 border rounded-lg font-mono text-sm font-bold text-[#15365C] bg-amber-50/40 focus:ring-2 focus:ring-[#15365C]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(tempGeneratedPass);
+                      showFeedback("Senha copiada para a área de transferência!");
+                    }}
+                    className="absolute right-2 px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border rounded text-[10px] font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                    title="Copiar senha para enviar ao colaborador"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copiar</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[11px] text-blue-900 leading-relaxed">
+                Ao confirmar, o colaborador poderá acessar o sistema imediatamente com esta nova senha. Copie e envie para ele com segurança.
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">
                 <button
                   type="button"
-                  onClick={() => setIsProfilePassModalOpen(false)}
+                  onClick={() => setIsResetUserPassModalOpen(false)}
                   className="px-4 py-2 border rounded-lg font-bold text-slate-600 hover:bg-slate-100"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#15365C] hover:bg-blue-900 text-white rounded-lg font-bold shadow"
+                  className="px-4 py-2 bg-[#15365C] hover:bg-blue-900 text-white rounded-lg font-bold shadow cursor-pointer"
+                >
+                  Confirmar e Gravar Nova Senha
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: RENOVAÇÃO / ALTERAÇÃO DE SENHA PESSOAL             */}
+      {/* ========================================================= */}
+      {isProfilePassModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-black text-sm text-[#15365C] uppercase flex items-center gap-2">
+                <Lock className="w-4 h-4 text-emerald-600" />
+                Renovar Minha Senha de Acesso
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfilePassModalOpen(false);
+                  setProfilePassError("");
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {profilePassError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+                <span>{profilePassError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfilePassword} className="space-y-4 text-xs">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="font-bold text-slate-700">Senha Atual</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileCurrentPass(!showProfileCurrentPass)}
+                    className="text-slate-500 hover:text-[#15365C] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    {showProfileCurrentPass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showProfileCurrentPass ? "Ocultar" : "Ver"}</span>
+                  </button>
+                </div>
+                <input
+                  type={showProfileCurrentPass ? "text" : "password"}
+                  required
+                  value={currentProfilePassword}
+                  onChange={(e) => setCurrentProfilePassword(e.target.value)}
+                  placeholder="Digite sua senha atual"
+                  className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#15365C]"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="font-bold text-slate-700">Nova Senha (mínimo 6 dígitos)</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const generated = generateSecurePassword("Clima");
+                        setNewProfilePassword(generated);
+                        setConfirmProfilePassword(generated);
+                      }}
+                      className="text-emerald-700 hover:text-emerald-800 text-[10px] font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 cursor-pointer"
+                      title="Sugerir uma senha corporativa forte"
+                    >
+                      <Key className="w-3 h-3 text-emerald-600" />
+                      <span>Sugerir Forte</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowProfileNewPass(!showProfileNewPass)}
+                      className="text-slate-500 hover:text-[#15365C] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      {showProfileNewPass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showProfileNewPass ? "Ocultar" : "Ver"}</span>
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type={showProfileNewPass ? "text" : "password"}
+                  required
+                  value={newProfilePassword}
+                  onChange={(e) => setNewProfilePassword(e.target.value)}
+                  placeholder="Digite sua nova senha"
+                  className="w-full p-2.5 border rounded-lg font-mono text-xs focus:ring-2 focus:ring-[#15365C]"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Confirmar Nova Senha</label>
+                <input
+                  type={showProfileNewPass ? "text" : "password"}
+                  required
+                  value={confirmProfilePassword}
+                  onChange={(e) => setConfirmProfilePassword(e.target.value)}
+                  placeholder="Repita exatamente a nova senha"
+                  className="w-full p-2.5 border rounded-lg font-mono text-xs focus:ring-2 focus:ring-[#15365C]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfilePassModalOpen(false);
+                    setProfilePassError("");
+                  }}
+                  className="px-4 py-2 border rounded-lg font-bold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#15365C] hover:bg-blue-900 text-white rounded-lg font-bold shadow cursor-pointer"
                 >
                   Salvar Nova Senha
                 </button>
