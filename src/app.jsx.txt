@@ -579,6 +579,8 @@ export default function App() {
   // Navigation scroll refs
   const headerNavRef = useRef(null);
   const quickSelectRef = useRef(null);
+  const ganttScrollRef = useRef(null);
+  const [showDemoLogins, setShowDemoLogins] = useState(true);
 
   // Modals
   const [isObraModalOpen, setIsObraModalOpen] = useState(false);
@@ -945,8 +947,12 @@ export default function App() {
     }, 200);
   };
 
-  // Gantt Timeline Columns configuration
+  // Gantt Timeline Columns configuration (18 Semanas completas: Outubro/2026 a Fevereiro/2027)
   const ganttWeeks = useMemo(() => [
+    { sem: "Sem 41", dates: "05/10 a 11/10" },
+    { sem: "Sem 42", dates: "12/10 a 18/10" },
+    { sem: "Sem 43", dates: "19/10 a 25/10" },
+    { sem: "Sem 44", dates: "26/10 a 01/11" },
     { sem: "Sem 45", dates: "02/11 a 08/11" },
     { sem: "Sem 46", dates: "09/11 a 15/11" },
     { sem: "Sem 47", dates: "16/11 a 22/11" },
@@ -955,7 +961,12 @@ export default function App() {
     { sem: "Sem 50", dates: "07/12 a 13/12" },
     { sem: "Sem 51", dates: "14/12 a 20/12" },
     { sem: "Sem 52", dates: "21/12 a 27/12" },
-    { sem: "Sem 01", dates: "28/12 a 03/01" }
+    { sem: "Sem 01", dates: "28/12 a 03/01" },
+    { sem: "Sem 02", dates: "04/01 a 10/01" },
+    { sem: "Sem 03", dates: "11/01 a 17/01" },
+    { sem: "Sem 04", dates: "18/01 a 24/01" },
+    { sem: "Sem 05", dates: "25/01 a 31/01" },
+    { sem: "Sem 06", dates: "01/02 a 07/02" }
   ], []);
 
   // Tasks assigned strictly to the logged-in user (ou todas se for visualizador)
@@ -1624,6 +1635,12 @@ export default function App() {
     }
   };
 
+  const scrollGantt = (direction) => {
+    if (ganttScrollRef.current) {
+      ganttScrollRef.current.scrollBy({ left: direction === "left" ? -350 : 350, behavior: "smooth" });
+    }
+  };
+
   // Handler para convidar / cadastrar usuário rapidamente
   const handleInviteUser = (e) => {
     e.preventDefault();
@@ -1723,36 +1740,53 @@ export default function App() {
             </button>
           </form>
 
-          {/* Atalho de Acesso Rápido para Testes */}
+          {/* Atalho de Acesso Rápido para Testes e Simulação de Perfis */}
           <div className="pt-4 border-t border-slate-100 space-y-2">
-            <span className="text-[10px] font-bold uppercase text-slate-400 block text-center">
-              Acesso Rápido / Simulação de Perfis:
-            </span>
-            <div className="grid grid-cols-1 gap-1.5">
-              {equipe.map(colab => (
-                <button
-                  key={colab.id}
-                  type="button"
-                  onClick={() => {
-                    setCurrentUser(colab);
-                    setIsAuthenticated(true);
-                    showFeedback(`Entrou como: ${colab.nome} (${colab.role})`);
-                  }}
-                  className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 text-left transition"
-                  title="Clique para entrar diretamente com este usuário"
-                >
-                  <div className="truncate">
-                    <span className="font-bold text-xs text-[#15365C] block truncate">{colab.nome}</span>
-                    <span className="text-[10px] text-slate-400 block truncate">{colab.email} • Senha: {colab.senha}</span>
-                  </div>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase flex-shrink-0 ${
-                    colab.role === "Coordenador" ? "bg-amber-100 text-amber-800" : colab.role === "Visualizador" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-[#15365C]"
-                  }`}>
-                    {colab.role}
-                  </span>
-                </button>
-              ))}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
+                Modo Demonstração & Testes
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDemoLogins(!showDemoLogins)}
+                className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 underline cursor-pointer"
+              >
+                {showDemoLogins ? "Ocultar Atalhos" : "Exibir Atalhos"}
+              </button>
             </div>
+            
+            {showDemoLogins && (
+              <>
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  * Este painel de atalhos rápidos existe apenas para facilitar a simulação dos 3 níveis de permissão durante os testes de desenvolvimento.
+                </p>
+                <div className="grid grid-cols-1 gap-1.5 pt-1">
+                  {equipe.map(colab => (
+                    <button
+                      key={colab.id}
+                      type="button"
+                      onClick={() => {
+                        setCurrentUser(colab);
+                        setIsAuthenticated(true);
+                        showFeedback(`Entrou como: ${colab.nome} (${colab.role})`);
+                      }}
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 text-left transition cursor-pointer"
+                      title="Clique para entrar diretamente com este usuário"
+                    >
+                      <div className="truncate">
+                        <span className="font-bold text-xs text-[#15365C] block truncate">{colab.nome}</span>
+                        <span className="text-[10px] text-slate-500 block truncate">{colab.email}</span>
+                      </div>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase flex-shrink-0 ${
+                        colab.role === "Coordenador" ? "bg-amber-100 text-amber-800" : colab.role === "Visualizador" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-[#15365C]"
+                      }`}>
+                        {colab.role}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -1780,18 +1814,18 @@ export default function App() {
 
       {/* HEADER PRINCIPAL */}
       <header className="bg-[#15365C] text-white shadow-md sticky top-0 z-40 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-5 lg:px-6">
           <div className="flex items-center justify-between h-16 gap-3">
-            {/* Logo Oficial Climapress com estilo moderno */}
+            {/* Logo Oficial Climapress em cápsula de alto contraste */}
             <div 
               className="flex items-center gap-3 flex-shrink-0 cursor-pointer group" 
               onClick={() => setCurrentTab(isCoordinator || isViewer ? "dashboard" : "minhas")}
               title="Climapress Engenharia"
             >
-              <div className="drop-shadow-md group-hover:scale-[1.02] transition-transform">
-                <ClimapressLogo className="h-11 w-auto" />
+              <div className="bg-white/95 group-hover:bg-white px-2.5 py-1.5 rounded-xl shadow-md border border-white/30 transition-transform group-hover:scale-105 flex items-center">
+                <ClimapressLogo className="h-8 sm:h-9 w-auto" />
               </div>
-              <div className="hidden md:block pl-3 border-l border-blue-900/60">
+              <div className="hidden md:block pl-2 border-l border-blue-900/60">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 block">
                   Sistema Integrado de Engenharia
                 </span>
@@ -1878,7 +1912,7 @@ export default function App() {
 
         {/* NAVEGAÇÃO HORIZONTAL SUAVE COM SETAS LATERAIS */}
         <div className="bg-[#0e243d] border-t border-blue-900/40 relative">
-          <div className="max-w-7xl mx-auto px-4 flex items-center relative">
+          <div className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-2 sm:px-4 flex items-center relative">
             <button
               type="button"
               onClick={() => scrollNav("left")}
@@ -2020,8 +2054,8 @@ export default function App() {
       </header>
 
       {/* BARRA DE EXPORTAÇÃO MULTI-FORMATO (PDF, WORD, EXCEL) */}
-      <div className="bg-white border-b border-slate-200 py-2.5 px-4 sm:px-6 shadow-sm print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-white border-b border-slate-200 py-2.5 px-3 sm:px-5 shadow-sm print:hidden">
+        <div className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
             <FileText className="w-4 h-4 text-[#15365C]" />
             <span className="uppercase tracking-wider">Exportar Relatório desta Aba ({currentTab.toUpperCase()}):</span>
@@ -2060,8 +2094,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* CONTEÚDO PRINCIPAL DINÂMICO */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+      {/* CONTEÚDO PRINCIPAL DINÂMICO - WIDE CONTAINER EXPANDIDO */}
+      <main className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-5 lg:px-6 py-6 flex-1 space-y-6">
         {/* ========================================================= */}
         {/* ABA: DASHBOARD EXECUTIVO (COORDENADOR OU VISUALIZADOR)     */}
         {/* ========================================================= */}
@@ -3255,7 +3289,7 @@ export default function App() {
                         ganttHeaderMode === "semanas" ? "bg-[#15365C] text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
-                      Semanas (Sem 45...)
+                      Semanas (Sem 41 a 06)
                     </button>
                     <button
                       type="button"
@@ -3265,6 +3299,28 @@ export default function App() {
                       }`}
                     >
                       Datas (Início a Fim)
+                    </button>
+                  </div>
+
+                  {/* Navegação Rápida do Cronograma Horizontal */}
+                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => scrollGantt("left")}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 rounded text-xs font-bold shadow-xs transition"
+                      title="Rolar cronograma para a esquerda"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Rolar Cronograma</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollGantt("right")}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 rounded text-xs font-bold shadow-xs transition"
+                      title="Rolar cronograma para a direita"
+                    >
+                      <span>Rolar Cronograma</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -3297,70 +3353,97 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quadro Visual do Cronograma de Gantt */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 overflow-x-auto space-y-4">
-              <div className="min-w-[950px] space-y-3">
-                <div className="grid grid-cols-12 gap-1 text-[11px] font-bold text-slate-600 uppercase pb-2 border-b border-slate-200 text-center">
-                  <div className="col-span-3 text-left">Obra & Atividade Técnica</div>
-                  {ganttWeeks.map(w => (
-                    <div key={w.sem} className="col-span-1 bg-slate-50 py-1 rounded border border-slate-100">
-                      <span className="block leading-tight text-[#15365C]">
-                        {ganttHeaderMode === "semanas" ? w.sem : w.dates.split(" a ")[0]}
-                      </span>
-                      <span className="text-[9px] text-slate-400 block font-normal">
-                        {ganttHeaderMode === "semanas" ? w.dates : `a ${w.dates.split(" a ")[1]}`}
-                      </span>
-                    </div>
-                  ))}
+            {/* Quadro Visual do Cronograma de Gantt com Barra de Rolagem Horizontal */}
+            <div 
+              ref={ganttScrollRef}
+              className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 overflow-x-auto space-y-4 scroll-smooth"
+            >
+              <div className="min-w-[1700px] space-y-3">
+                <div className="flex items-center text-[11px] font-bold text-slate-600 uppercase pb-2 border-b border-slate-200">
+                  <div className="w-[360px] min-w-[360px] flex-shrink-0 sticky left-0 bg-white z-20 pr-4 text-left font-black text-[#15365C]">
+                    Obra & Atividade Técnica
+                  </div>
+                  <div 
+                    className="flex-1 grid gap-1 text-center"
+                    style={{ gridTemplateColumns: `repeat(${ganttWeeks.length}, minmax(75px, 1fr))` }}
+                  >
+                    {ganttWeeks.map(w => (
+                      <div key={w.sem} className="bg-slate-50 py-1.5 px-0.5 rounded border border-slate-100 min-w-[75px]">
+                        <span className="block leading-tight text-[#15365C] font-bold">
+                          {ganttHeaderMode === "semanas" ? w.sem : w.dates.split(" a ")[0]}
+                        </span>
+                        <span className="text-[9px] text-slate-400 block font-normal truncate">
+                          {ganttHeaderMode === "semanas" ? w.dates : `a ${w.dates.split(" a ")[1]}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {atividades
                   .filter(a => ganttObraFilter === "Todas" || a.obraNome === ganttObraFilter)
-                  .slice(0, 35)
+                  .slice(0, 45)
                   .map(act => {
-                    // BUG-03 RESOLUTION: Posicionamento e largura reais baseados no calendário e datas
-                    const timelineStart = new Date("2026-11-02T00:00:00").getTime();
-                    const timelineEnd = new Date("2027-01-03T23:59:59").getTime();
+                    // Posicionamento e largura reais baseados no calendário completo de 18 semanas (Out/26 a Fev/27)
+                    const timelineStart = new Date("2026-10-05T00:00:00").getTime();
+                    const timelineEnd = new Date("2027-02-07T23:59:59").getTime();
                     const timelineDuration = timelineEnd - timelineStart;
 
                     const actStart = act.inicioPrevisto ? new Date(act.inicioPrevisto + "T00:00:00").getTime() : timelineStart;
                     const actEnd = act.terminoPrevisto ? new Date(act.terminoPrevisto + "T23:59:59").getTime() : (actStart + ((act.dias || 14) * 86400000));
 
-                    const leftPercent = Math.max(0, Math.min(94, ((actStart - timelineStart) / timelineDuration) * 100));
+                    const leftPercent = Math.max(0, Math.min(97, ((actStart - timelineStart) / timelineDuration) * 100));
                     const rawWidth = ((actEnd - actStart) / timelineDuration) * 100;
-                    const widthPercent = Math.max(6, Math.min(100 - leftPercent, rawWidth));
+                    const widthPercent = Math.max(3, Math.min(100 - leftPercent, rawWidth));
 
                     return (
-                      <div key={act.id} className="grid grid-cols-12 gap-1 items-center text-xs py-1.5 border-b border-slate-50 hover:bg-slate-50/60 transition">
-                        <div className="col-span-3 truncate font-semibold text-[#15365C]" title={`${act.obraNome}: ${act.atividade} (${act.resp1})`}>
-                          <div className="flex items-center justify-between">
-                            <span className="font-black text-[10px] text-slate-500 uppercase">{act.obraNome}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{(act.dias || 14) * 10}h</span>
+                      <div key={act.id} className="flex items-center text-xs py-2 border-b border-slate-100 hover:bg-slate-50/70 transition group">
+                        <div className="w-[360px] min-w-[360px] flex-shrink-0 sticky left-0 bg-white group-hover:bg-slate-50/90 z-10 pr-4 font-semibold text-[#15365C] border-r border-slate-100">
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <span className="font-black text-[10px] text-slate-500 uppercase tracking-wider truncate">{act.obraNome}</span>
+                            <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-mono flex-shrink-0">
+                              {(act.dias || 14) * 10}h
+                            </span>
                           </div>
-                          <div className="truncate font-bold">{act.atividade}</div>
-                          <div className="text-[10px] text-slate-400 flex items-center justify-between">
-                            <span>Líder: {act.resp1}</span>
-                            <span className="font-mono text-[9px] text-slate-500">{act.dias} dias</span>
+                          <div className="font-bold text-xs text-[#15365C] leading-snug break-words">
+                            {act.atividade}
+                          </div>
+                          <div className="text-[10px] text-slate-400 flex items-center justify-between mt-1">
+                            <span className="truncate">Líder: <strong className="text-slate-600">{act.resp1}</strong></span>
+                            <span className="font-mono text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded flex-shrink-0">{act.dias} dias</span>
                           </div>
                         </div>
-                        <div className="col-span-9 bg-slate-100 rounded-lg h-7 relative overflow-hidden flex items-center border border-slate-200/50">
-                          <div
-                            className="absolute h-full rounded-md shadow-xs overflow-hidden flex items-center transition-all bg-slate-200"
-                            style={{
-                              left: `${leftPercent}%`,
-                              width: `${widthPercent}%`
-                            }}
-                            title={`${act.atividade} (${act.inicioPrevisto} a ${act.terminoPrevisto}) • Progresso: ${act.percentual}%`}
-                          >
+
+                        <div className="flex-1 pl-3 min-w-[1350px] relative">
+                          <div className="bg-slate-100 rounded-lg h-7 relative overflow-hidden flex items-center border border-slate-200/50">
+                            {/* Grid vertical de fundo para marcação das 18 semanas */}
+                            <div 
+                              className="absolute inset-0 grid pointer-events-none opacity-20"
+                              style={{ gridTemplateColumns: `repeat(${ganttWeeks.length}, minmax(75px, 1fr))` }}
+                            >
+                              {ganttWeeks.map((_, i) => (
+                                <div key={i} className="border-r border-slate-400 h-full" />
+                              ))}
+                            </div>
+
                             <div
-                              className={`h-full transition-all ${
-                                act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-[#15365C]" : "bg-slate-400"
-                              }`}
-                              style={{ width: `${act.percentual}%` }}
-                            />
-                            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-xs px-1 select-none whitespace-nowrap">
-                              {act.percentual}%
-                            </span>
+                              className="absolute h-full rounded-md shadow-xs overflow-hidden flex items-center transition-all bg-slate-200"
+                              style={{
+                                left: `${leftPercent}%`,
+                                width: `${widthPercent}%`
+                              }}
+                              title={`${act.atividade} (${act.inicioPrevisto} a ${act.terminoPrevisto}) • Progresso: ${act.percentual}%`}
+                            >
+                              <div
+                                className={`h-full transition-all ${
+                                  act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-[#15365C]" : "bg-slate-400"
+                                }`}
+                                style={{ width: `${act.percentual}%` }}
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-xs px-1 select-none whitespace-nowrap">
+                                {act.percentual}%
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3418,10 +3501,12 @@ export default function App() {
       {/* ========================================================= */}
       {/* RODAPÉ OFICIAL CORPORATIVO DE ENGENHARIA                  */}
       {/* ========================================================= */}
-      <footer className="bg-[#0e243d] text-slate-300 border-t border-blue-950 py-5 px-4 text-center text-xs mt-auto print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="bg-[#0e243d] text-slate-300 border-t border-blue-950 py-5 px-3 sm:px-5 text-center text-xs mt-auto print:hidden">
+        <div className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <ClimapressLogo className="h-6 w-auto" />
+            <div className="bg-white/95 px-2 py-1 rounded-lg shadow-sm flex items-center">
+              <ClimapressLogo className="h-5 w-auto" />
+            </div>
             <span className="font-bold text-white text-[11px] tracking-wide">
               Climapress Instalações de Sistemas de Ar condicionado
             </span>
