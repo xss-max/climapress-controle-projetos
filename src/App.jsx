@@ -203,7 +203,8 @@ const INITIAL_EQUIPE = [
     email: "murilo.miranda@climapress.com.br",
     fone: "(11) 98765-4321",
     role: "Coordenador",
-    senha: "123"
+    senha: "123",
+    disponibilidade: "ativo"
   },
   {
     id: 2,
@@ -211,7 +212,8 @@ const INITIAL_EQUIPE = [
     email: "lucas.silva@climapress.com.br",
     fone: "(11) 97123-4567",
     role: "Colaborador",
-    senha: "123"
+    senha: "123",
+    disponibilidade: "ativo"
   },
   {
     id: 3,
@@ -219,7 +221,8 @@ const INITIAL_EQUIPE = [
     email: "carlos.santos@climapress.com.br",
     fone: "(11) 98234-5678",
     role: "Colaborador",
-    senha: "123"
+    senha: "123",
+    disponibilidade: "ativo"
   },
   {
     id: 4,
@@ -227,7 +230,8 @@ const INITIAL_EQUIPE = [
     email: "mariana.costa@climapress.com.br",
     fone: "(11) 99345-6789",
     role: "Visualizador",
-    senha: "123"
+    senha: "123",
+    disponibilidade: "ativo"
   }
 ];
 
@@ -562,7 +566,7 @@ export default function App() {
   const [resumoCardFilter, setResumoCardFilter] = useState("todos");
   const [minhasAtividadesObraFilter, setMinhasAtividadesObraFilter] = useState("Todas");
   const [dashboardMes, setDashboardMes] = useState("2026-11"); // Controle de Horas Mensais (YYYY-MM ou "todos")
-  const HORAS_MENSAIS_POR_COLABORADOR = 176; // 44h semanais CLT x 4 semanas (8h diárias base, sem considerar hora extra)
+  const HORAS_MENSAIS_POR_COLABORADOR = 176; // 44h semanais Time de Projetos x 4 semanas (8h diárias base, sem considerar hora extra)
   const [taskManagerObra, setTaskManagerObra] = useState(() => {
     const loaded = loadStorage("climapress_obras", INITIAL_OBRAS);
     return loaded[0]?.nome || "Sede Corporativa Nubank";
@@ -897,11 +901,16 @@ export default function App() {
     };
   }, [raioXObra, resumoPeriodoFilter, obras, atividades, bancoHoras]);
 
-  // Balanço Executivo de Horas (Capacidade 44h/sem x Demanda) para o Dashboard
+  // Balanço Executivo de Horas (Capacidade Time de Projeto x Demanda) para o Dashboard
   const balancoHorasMes = useMemo(() => {
     const numTecnicos = equipeTecnica.length;
+    const tecnicosAtivos = equipeTecnica.filter(u => (u.disponibilidade || "ativo") === "ativo");
+    const tecnicosFerias = equipeTecnica.filter(u => u.disponibilidade === "ferias");
+    const tecnicosCampo = equipeTecnica.filter(u => u.disponibilidade === "campo");
+
+    const numAtivosProjetos = tecnicosAtivos.length;
     const multiplicadorMeses = dashboardMes === "todos" ? 5 : 1;
-    const capacidadeTotalDisponivel = numTecnicos * HORAS_MENSAIS_POR_COLABORADOR * multiplicadorMeses;
+    const capacidadeTotalDisponivel = numAtivosProjetos * HORAS_MENSAIS_POR_COLABORADOR * multiplicadorMeses;
 
     let horasDemandadasTotal = 0;
     const horasDemandadasPorObra = {};
@@ -926,7 +935,7 @@ export default function App() {
     const saldoHoras = Math.round((capacidadeTotalDisponivel - horasDemandadasTotal) * 10) / 10;
     const taxaOcupacao = capacidadeTotalDisponivel > 0
       ? Math.round((horasDemandadasTotal / capacidadeTotalDisponivel) * 100)
-      : 0;
+      : (horasDemandadasTotal > 0 ? 100 : 0);
 
     // Atividades sem profissional vinculado ("A Definir")
     const tarefasPendentesAlocacao = atividades.filter(
@@ -935,7 +944,7 @@ export default function App() {
 
     // Comparativo mês a mês para gráfico/régua de capacidade
     const comparativoMeses = MESES_OPCOES.filter(m => m.id !== "todos").map(m => {
-      const capMes = numTecnicos * HORAS_MENSAIS_POR_COLABORADOR;
+      const capMes = numAtivosProjetos * HORAS_MENSAIS_POR_COLABORADOR;
       const demMes = Math.round(
         atividades.reduce((acc, a) => acc + getTaskHoursInMonth(a, m.id), 0) * 10
       ) / 10;
@@ -944,7 +953,7 @@ export default function App() {
           .filter(b => b.data && b.data.startsWith(m.id))
           .reduce((acc, curr) => acc + (curr.totalHoras || 0), 0) * 10
       ) / 10;
-      const ocupMes = capMes > 0 ? Math.round((demMes / capMes) * 100) : 0;
+      const ocupMes = capMes > 0 ? Math.round((demMes / capMes) * 100) : (demMes > 0 ? 100 : 0);
       return {
         ...m,
         capacidade: capMes,
@@ -956,6 +965,12 @@ export default function App() {
 
     return {
       numTecnicos,
+      numAtivosProjetos,
+      numFerias: tecnicosFerias.length,
+      numCampo: tecnicosCampo.length,
+      tecnicosAtivos,
+      tecnicosFerias,
+      tecnicosCampo,
       capacidadeTotalDisponivel,
       horasDemandadasTotal,
       horasRealizadasNoMes,
@@ -1069,6 +1084,7 @@ export default function App() {
         email: editingUser.email.trim(),
         fone: editingUser.fone.trim() || "(11) 98000-0000",
         role: editingUser.role || "Colaborador",
+        disponibilidade: editingUser.disponibilidade || "ativo",
         senha: editingUser.senha || "123"
       };
       setEquipe(prev => [...prev, newUser]);
@@ -1077,6 +1093,7 @@ export default function App() {
       const oldUser = equipe.find(u => u.id === editingUser.id);
       const newName = editingUser.nome.trim();
       const newEmail = editingUser.email.trim();
+      const newDisp = editingUser.disponibilidade || oldUser?.disponibilidade || "ativo";
 
       if (oldUser && oldUser.nome !== newName) {
         const oldName = oldUser.nome;
@@ -1095,9 +1112,9 @@ export default function App() {
         );
       }
 
-      setEquipe(prev => prev.map(u => (u.id === editingUser.id ? { ...editingUser, nome: newName, email: newEmail } : u)));
+      setEquipe(prev => prev.map(u => (u.id === editingUser.id ? { ...u, ...editingUser, nome: newName, email: newEmail, disponibilidade: newDisp } : u)));
       if (currentUser?.id === editingUser.id) {
-        setCurrentUser({ ...editingUser, nome: newName, email: newEmail });
+        setCurrentUser(prev => ({ ...prev, ...editingUser, nome: newName, email: newEmail, disponibilidade: newDisp }));
       }
       showFeedback(`Dados de "${newName}" atualizados com sucesso!`);
     }
@@ -1148,6 +1165,23 @@ export default function App() {
       showFeedback(`Profissional "${userToDelete.nome}" removido da equipe.`);
     }
     setUserToDelete(null);
+  };
+
+  // Função para alternar rapidamente a disponibilidade do profissional (Ativo em Projetos, Férias ou Campo)
+  const handleSetUserDisponibilidade = (userId, novaDisponibilidade) => {
+    setEquipe(prev => prev.map(u => {
+      if (u.id === userId) {
+        return { ...u, disponibilidade: novaDisponibilidade };
+      }
+      return u;
+    }));
+    const userMod = equipe.find(u => u.id === userId);
+    const labelDisp = novaDisponibilidade === "ferias" 
+      ? "Férias (0h na capacidade de projetos)" 
+      : novaDisponibilidade === "campo" 
+      ? "Em Campo / Obras (0h na capacidade de projetos)" 
+      : "Disponível em Projetos (176h/mês)";
+    showFeedback(`Disponibilidade de ${userMod?.nome?.split(" ")[0] || "Profissional"} atualizada para "${labelDisp}".`);
   };
 
   // Helper de impressão do Gantt com injeção de CSS de tamanho de papel de plotter (A4, A3, A2, A1, A0)
@@ -2111,6 +2145,7 @@ export default function App() {
       email: inviteData.email.trim(),
       fone: inviteData.fone.trim() || "(11) 98000-0000",
       role: inviteData.role || "Colaborador",
+      disponibilidade: "ativo",
       senha: inviteData.senha || "123"
     };
 
@@ -2578,7 +2613,7 @@ export default function App() {
                         Painel Executivo & Balanço Operacional
                       </h2>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-[#15365C] border border-blue-200">
-                        CLT 44h/Sem (8h/dia) • Sem Hora Extra
+                        Jornada Time de Projetos (44h/Sem • 8h/dia)
                       </span>
                     </div>
                     <p className="text-xs text-slate-500">
@@ -2599,7 +2634,7 @@ export default function App() {
                     }`}
                   >
                     <BarChart2 className="w-3.5 h-3.5" />
-                    <span>Capacidade CLT</span>
+                    <span>Capacidade Time de Projeto</span>
                   </button>
                   <button
                     type="button"
@@ -2682,8 +2717,12 @@ export default function App() {
                   {balancoHorasMes.capacidadeTotalDisponivel}h
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span><strong>{balancoHorasMes.numTecnicos} colaboradores</strong></span>
-                  <span className="font-mono text-[11px]">176h/mês cada</span>
+                  <span><strong>{balancoHorasMes.numAtivosProjetos} de {balancoHorasMes.numTecnicos} ativos em projetos</strong></span>
+                  <span className="font-mono text-[11px]">
+                    {balancoHorasMes.numFerias > 0 || balancoHorasMes.numCampo > 0
+                      ? `${balancoHorasMes.numFerias > 0 ? `${balancoHorasMes.numFerias} férias` : ""}${balancoHorasMes.numFerias > 0 && balancoHorasMes.numCampo > 0 ? " • " : ""}${balancoHorasMes.numCampo > 0 ? `${balancoHorasMes.numCampo} campo` : ""}`
+                      : "176h/mês cada"}
+                  </span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                   <div className="bg-teal-600 h-1.5 rounded-full w-full" />
@@ -2788,7 +2827,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* 3. VISÃO A: COCKPIT DE CAPACIDADE & DEMANDA CLT */}
+            {/* 3. VISÃO A: COCKPIT DE CAPACIDADE TIME DE PROJETO & DEMANDA */}
             {(dashboardViewTab === "cockpit" || dashboardViewTab === "completo") && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2801,7 +2840,7 @@ export default function App() {
                             Comparativo Direto de Horas — {dashboardMes === "todos" ? "Consolidado Geral" : MESES_OPCOES.find(m => m.id === dashboardMes)?.nome}
                           </span>
                           <span className="text-[11px] text-slate-500">
-                            Capacidade Nominal CLT vs Carga de Trabalho Demandada
+                            Capacidade Time de Projeto vs Carga de Trabalho Demandada
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] font-bold">
@@ -2814,6 +2853,25 @@ export default function App() {
                         </div>
                       </div>
 
+                      {/* Aviso de Ajuste de Capacidade (Férias ou Campo) */}
+                      {(balancoHorasMes.numFerias > 0 || balancoHorasMes.numCampo > 0) && (
+                        <div className="p-2.5 bg-amber-50/90 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                            <span>
+                              <strong>Ajuste de Capacidade Ativo:</strong>{" "}
+                              {balancoHorasMes.numFerias > 0 && `${balancoHorasMes.numFerias} profissional(is) em férias`}
+                              {balancoHorasMes.numFerias > 0 && balancoHorasMes.numCampo > 0 && " • "}
+                              {balancoHorasMes.numCampo > 0 && `${balancoHorasMes.numCampo} profissional(is) em campo`}{" "}
+                              (horas deduzidas da disponibilidade de projetos).
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 bg-white rounded border border-amber-300 font-bold text-[10px] text-amber-800 flex-shrink-0">
+                            -{((balancoHorasMes.numFerias + balancoHorasMes.numCampo) * 176 * (dashboardMes === "todos" ? 5 : 1))}h
+                          </span>
+                        </div>
+                      )}
+
                       {/* 3 Barras Visuais Proporcionais */}
                       <div className="space-y-3 pt-1">
                         {/* Barra 1: Disponíveis */}
@@ -2821,7 +2879,7 @@ export default function App() {
                           <div className="flex justify-between items-center text-xs">
                             <span className="font-bold text-teal-900 flex items-center gap-1.5">
                               <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block"></span>
-                              Capacidade Disponível (Base Nominal 44h/sem)
+                              Capacidade Disponível (Time de Projetos • Base 44h/sem)
                             </span>
                             <span className="font-mono font-bold text-teal-800 text-xs">
                               {balancoHorasMes.capacidadeTotalDisponivel}h (100%)
@@ -4376,6 +4434,7 @@ export default function App() {
                           email: "",
                           fone: "",
                           role: "Colaborador",
+                          disponibilidade: "ativo",
                           senha: "123"
                         });
                         setUserModalMode("create");
@@ -4399,19 +4458,19 @@ export default function App() {
                 </div>
                 <div>
                   <span className="font-black text-[#15365C] uppercase text-xs block">
-                    Regra de Jornada Técnica: 8h Diárias • 44h Semanais (176h/mês por profissional)
+                    Regra de Jornada Técnica: 8h Diárias • 44h Semanais (176h/mês por profissional do Time de Projetos)
                   </span>
                   <p className="text-slate-500 text-[11px]">
-                    Capacidade nominal de execução sem considerar horas extras, válida para todos os <strong>Coordenadores</strong> e <strong>Colaboradores</strong> operacionais de Engenharia.
+                    Capacidade nominal de execução sem considerar horas extras, válida para todos os <strong>Coordenadores</strong> e <strong>Colaboradores</strong> operacionais de Engenharia ativos em projetos.
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-700">
-                  Carga por Engenheiro: <strong className="text-teal-700">176h/mês</strong>
+                  Carga por Engenheiro Ativo: <strong className="text-teal-700">176h/mês</strong>
                 </span>
                 <span className="px-3 py-1 bg-[#15365C] text-white rounded-lg font-mono font-black">
-                  Capacidade Total do Time: {equipeTecnica.length * 176}h/mês
+                  Capacidade Disponível do Time: {balancoHorasMes.capacidadeTotalDisponivel}h/mês ({balancoHorasMes.numAtivosProjetos} ativos{balancoHorasMes.numFerias > 0 ? ` • ${balancoHorasMes.numFerias} férias` : ""}{balancoHorasMes.numCampo > 0 ? ` • ${balancoHorasMes.numCampo} campo` : ""})
                 </span>
               </div>
             </div>
@@ -4419,38 +4478,58 @@ export default function App() {
             {/* Grid de Cards dos Membros da Equipe */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {equipe.map(colab => {
+                const dispColab = colab.disponibilidade || "ativo"; // "ativo" | "ferias" | "campo"
+                const isFerias = dispColab === "ferias";
+                const isCampo = dispColab === "campo";
+                const isAtivoProjetos = dispColab === "ativo";
                 const isOperational = colab.role === "Coordenador" || colab.role === "Colaborador";
+
                 const tarefasColab = atividades.filter(
                   a => a.resp1 === colab.nome || a.resp2 === colab.nome || a.resp3 === colab.nome
                 );
                 const obrasColab = Array.from(new Set(tarefasColab.map(a => a.obraNome)));
                 const totalHorasPrevistas = tarefasColab.reduce((acc, a) => acc + ((a.dias || 14) * 10), 0);
 
-                // Cálculo de capacidade do colaborador no mês selecionado
-                const horasMensaisDisponiveis = isOperational ? 176 : 0;
+                // Cálculo de capacidade do colaborador no mês selecionado (zerado se férias ou campo)
+                const horasMensaisDisponiveis = isOperational && isAtivoProjetos ? (dashboardMes === "todos" ? 176 * 5 : 176) : 0;
                 const horasDemandadasColabMes = Math.round(
                   tarefasColab.reduce((acc, a) => acc + getTaskHoursInMonth(a, dashboardMes), 0) * 10
                 ) / 10;
                 const saldoHorasColab = Math.round((horasMensaisDisponiveis - horasDemandadasColabMes) * 10) / 10;
                 const percOcupacaoColab = horasMensaisDisponiveis > 0 
                   ? Math.round((horasDemandadasColabMes / horasMensaisDisponiveis) * 100) 
-                  : 0;
+                  : (horasDemandadasColabMes > 0 ? 100 : 0);
 
                 return (
                   <div
                     key={colab.id}
-                    className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3.5 hover:border-slate-300 transition"
+                    className={`bg-white rounded-xl shadow-sm border p-5 space-y-3.5 transition ${
+                      isFerias ? "border-amber-200 bg-amber-50/20" : isCampo ? "border-blue-200 bg-blue-50/20" : "border-slate-200 hover:border-slate-300"
+                    }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                        colab.role === "Coordenador"
-                          ? "bg-amber-100 text-amber-800"
-                          : colab.role === "Visualizador"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-blue-100 text-[#15365C]"
-                      }`}>
-                        {colab.role}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                          colab.role === "Coordenador"
+                            ? "bg-amber-100 text-amber-800"
+                            : colab.role === "Visualizador"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-blue-100 text-[#15365C]"
+                        }`}>
+                          {colab.role}
+                        </span>
+                        {isFerias && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase bg-amber-100 text-amber-800 border border-amber-300">
+                            🏖️ Férias
+                          </span>
+                        )}
+                        {isCampo && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase bg-blue-100 text-[#15365C] border border-blue-300">
+                            🦺 Campo
+                          </span>
+                        )}
+                      </div>
+
                       {isCoordinator && (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -4464,7 +4543,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => {
-                              setEditingUser(colab);
+                              setEditingUser({ ...colab, disponibilidade: colab.disponibilidade || "ativo" });
                               setUserModalMode("edit");
                               setIsUserModalOpen(true);
                             }}
@@ -4491,17 +4570,97 @@ export default function App() {
                       <p className="text-[11px] text-slate-500 font-mono mt-0.5">{colab.fone}</p>
                     </div>
 
+                    {/* Controle Rápido de Status / Disponibilidade (Item A) */}
+                    {isOperational && (
+                      <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-2.5 space-y-2">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="font-bold text-slate-600 uppercase flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-[#15365C]" />
+                            Disponibilidade no Time:
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full font-black text-[9px] uppercase border ${
+                            isAtivoProjetos
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : isFerias
+                              ? "bg-amber-50 text-amber-800 border-amber-200"
+                              : "bg-blue-50 text-blue-900 border-blue-200"
+                          }`}>
+                            {isAtivoProjetos ? "🟢 Projetos (176h)" : isFerias ? "🏖️ Férias (0h)" : "🦺 Campo (0h)"}
+                          </span>
+                        </div>
+
+                        {isCoordinator ? (
+                          <div className="grid grid-cols-3 gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleSetUserDisponibilidade(colab.id, "ativo")}
+                              className={`py-1 px-1 rounded text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                                isAtivoProjetos
+                                  ? "bg-emerald-700 text-white shadow-xs font-black"
+                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-800"
+                              }`}
+                              title="Disponível em Projetos de Engenharia (176h/mês)"
+                            >
+                              <span>🟢 Projetos</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetUserDisponibilidade(colab.id, "ferias")}
+                              className={`py-1 px-1 rounded text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                                isFerias
+                                  ? "bg-amber-600 text-white shadow-xs font-black"
+                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-amber-50 hover:text-amber-800"
+                              }`}
+                              title="Período de Férias (0h na capacidade do time de projetos)"
+                            >
+                              <span>🏖️ Férias</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetUserDisponibilidade(colab.id, "campo")}
+                              className={`py-1 px-1 rounded text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                                isCampo
+                                  ? "bg-[#15365C] text-white shadow-xs font-black"
+                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-blue-50 hover:text-[#15365C]"
+                              }`}
+                              title="Dedicado a Obras / Canteiro em Campo (0h de projetos)"
+                            >
+                              <span>🦺 Campo</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-500 italic">
+                            {isAtivoProjetos
+                              ? "Profissional disponível na grade de projetos com 176h/mês."
+                              : isFerias
+                              ? "Profissional em férias. Capacidade zerada para projetos de engenharia."
+                              : "Profissional em canteiro de obras. Sem horas disponíveis para projetos de escritório."}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Bloco de Capacidade de Execução Individual (Item D) */}
                     <div className="p-3 bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-xl border border-slate-200/90 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-blue-600" />
-                          Capacidade de Execução ({dashboardMes === "todos" ? "Geral" : MESES_OPCOES.find(m => m.id === dashboardMes)?.mesAbrev})
+                          Capacidade Time de Projeto ({dashboardMes === "todos" ? "Geral" : MESES_OPCOES.find(m => m.id === dashboardMes)?.mesAbrev})
                         </span>
                         {isOperational ? (
-                          <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-teal-100 text-teal-900 border border-teal-300">
-                            Base: 176h/mês
-                          </span>
+                          isAtivoProjetos ? (
+                            <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-teal-100 text-teal-900 border border-teal-300">
+                              Base: 176h/mês
+                            </span>
+                          ) : isFerias ? (
+                            <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                              0h • Férias
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-blue-100 text-[#15365C] border border-blue-300">
+                              0h • Em Campo
+                            </span>
+                          )
                         ) : (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-900">
                             Somente Leitura
@@ -4514,7 +4673,9 @@ export default function App() {
                           <div className="grid grid-cols-3 gap-1.5 text-center">
                             <div className="bg-white p-1.5 rounded border border-slate-200/80">
                               <span className="text-[9px] text-slate-400 font-bold uppercase block">Pode Executar</span>
-                              <span className="text-xs font-black text-teal-800">176h</span>
+                              <span className={`text-xs font-black ${isAtivoProjetos ? "text-teal-800" : "text-slate-400"}`}>
+                                {horasMensaisDisponiveis}h
+                              </span>
                             </div>
                             <div className="bg-white p-1.5 rounded border border-slate-200/80">
                               <span className="text-[9px] text-slate-400 font-bold uppercase block">Alocado Mês</span>
@@ -4528,22 +4689,39 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="space-y-1 pt-0.5">
-                            <div className="flex justify-between items-center text-[10px]">
-                              <span className="text-slate-500 font-semibold">Jornada CLT: 8h/dia • 44h/semana</span>
-                              <span className={`font-black ${percOcupacaoColab > 100 ? "text-rose-600" : percOcupacaoColab > 80 ? "text-amber-700" : "text-emerald-700"}`}>
-                                {percOcupacaoColab}% ocupação
-                              </span>
+                          {/* Alerta de conflito de férias com tarefas */}
+                          {isFerias && horasDemandadasColabMes > 0 && (
+                            <div className="p-2 bg-rose-50 border border-rose-200 rounded text-[10px] text-rose-800 flex items-center gap-1.5">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+                              <span><strong>Atenção:</strong> Há {horasDemandadasColabMes}h alocadas a este colaborador durante seu período de férias!</span>
                             </div>
-                            <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                              <div
-                                className={`h-1.5 transition-all ${
-                                  percOcupacaoColab > 100 ? "bg-rose-600" : percOcupacaoColab > 80 ? "bg-amber-500" : "bg-emerald-600"
-                                }`}
-                                style={{ width: `${Math.min(100, percOcupacaoColab)}%` }}
-                              />
+                          )}
+
+                          {isCampo && (
+                            <div className="p-2 bg-blue-50 border border-blue-200 rounded text-[10px] text-[#15365C] flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                              <span>Dedicado a canteiro de obras. Sem disponibilidade para novos projetos de escritório.</span>
                             </div>
-                          </div>
+                          )}
+
+                          {isAtivoProjetos && (
+                            <div className="space-y-1 pt-0.5">
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-slate-500 font-semibold">Jornada Time de Projetos: 8h/dia • 44h/semana</span>
+                                <span className={`font-black ${percOcupacaoColab > 100 ? "text-rose-600" : percOcupacaoColab > 80 ? "text-amber-700" : "text-emerald-700"}`}>
+                                  {percOcupacaoColab}% ocupação
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-1.5 transition-all ${
+                                    percOcupacaoColab > 100 ? "bg-rose-600" : percOcupacaoColab > 80 ? "bg-amber-500" : "bg-emerald-600"
+                                  }`}
+                                  style={{ width: `${Math.min(100, percOcupacaoColab)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div className="p-2 bg-white rounded border border-purple-100 text-[11px] text-purple-900 leading-tight">
@@ -5188,6 +5366,22 @@ export default function App() {
                 </select>
                 <p className="text-[10px] text-slate-500 mt-1 italic">
                   * Visualizadores (Diretoria) podem consultar relatórios, filtros e cronogramas sem permissão de alteração.
+                </p>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Disponibilidade no Time de Projetos</label>
+                <select
+                  value={editingUser.disponibilidade || "ativo"}
+                  onChange={(e) => setEditingUser(prev => ({ ...prev, disponibilidade: e.target.value }))}
+                  className="w-full p-2.5 border rounded-lg font-bold text-[#15365C] bg-white focus:ring-2 focus:ring-[#15365C]"
+                >
+                  <option value="ativo">🟢 Projetos (Ativo no Escritório • 176h/mês)</option>
+                  <option value="ferias">🏖️ Em Férias (0h de capacidade em projetos no período)</option>
+                  <option value="campo">🦺 Em Campo / Obras (0h de projetos • Dedicação a Canteiro)</option>
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1 italic">
+                  * Ao sinalizar Férias ou Campo, o sistema ajusta automaticamente a capacidade total do time e os saldos de horas do Dashboard.
                 </p>
               </div>
 
