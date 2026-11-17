@@ -146,6 +146,16 @@ const Copy = ({ className = "w-4 h-4" }) => (
     <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
   </svg>
 );
+const BarChart2 = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>
+  </svg>
+);
+const TrendingUp = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+  </svg>
+);
 
 // --- HELPER: GERAÇÃO DE SENHA SEGURA CORPORATIVA (8 CARACTERES ALFANUMÉRICO + SÍMBOLO) ---
 const generateSecurePassword = (prefix = "Clima") => {
@@ -295,8 +305,8 @@ const INITIAL_ACTIVITIES_LIST = [
     atividade: "TESTE DE ESTANQUEIDADE COM NITROGÊNIO E VÁCUO",
     fase: "Infraestrutura",
     dias: 5,
-    resp1: "Carlos Eduardo Santos",
-    resp2: "Engº Murilo Miranda da Silva",
+    resp1: "A Definir",
+    resp2: "",
     resp3: "",
     percentual: 0,
     isNA: false,
@@ -477,11 +487,23 @@ export default function App() {
   const [bancoHoras, setBancoHoras] = useState(() => loadStorage("climapress_banco_horas", INITIAL_TIME_ENTRIES));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [auditLogs, setAuditLogs] = useState(() => loadStorage("climapress_audit_logs", []));
+  const [obrasExcluidas, setObrasExcluidas] = useState(() => loadStorage("climapress_obras_excluidas", []));
+  const [obrasViewTab, setObrasViewTab] = useState("ativas"); // "ativas" | "lixeira"
+  const [showGraficoHoras, setShowGraficoHoras] = useState(true);
+  const [tipoGraficoHoras, setTipoGraficoHoras] = useState("mensal"); // "mensal" | "multimeses"
+  const [resumoPeriodoFilter, setResumoPeriodoFilter] = useState("todos"); // "todos" | "2026-10" | "2026-11" | "2026-12" | "2027-01" | "2027-02"
+  const [dashboardViewTab, setDashboardViewTab] = useState("cockpit"); // "cockpit" | "raiox" | "completo"
 
   // Sync to LocalStorage effects
   useEffect(() => {
     try { window.localStorage.setItem("climapress_equipe", JSON.stringify(equipe)); } catch (e) {}
   }, [equipe]);
+
+  useEffect(() => {
+    if (currentUser && equipe.length > 0 && !equipe.some(u => u.id === currentUser.id)) {
+      setCurrentUser(equipe[0]);
+    }
+  }, [equipe, currentUser]);
 
   useEffect(() => {
     try { window.localStorage.setItem("climapress_current_user", JSON.stringify(currentUser)); } catch (e) {}
@@ -502,6 +524,10 @@ export default function App() {
   useEffect(() => {
     try { window.localStorage.setItem("climapress_audit_logs", JSON.stringify(auditLogs)); } catch (e) {}
   }, [auditLogs]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("climapress_obras_excluidas", JSON.stringify(obrasExcluidas)); } catch (e) {}
+  }, [obrasExcluidas]);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -535,6 +561,8 @@ export default function App() {
   const [raioXObra, setRaioXObra] = useState("Todas");
   const [resumoCardFilter, setResumoCardFilter] = useState("todos");
   const [minhasAtividadesObraFilter, setMinhasAtividadesObraFilter] = useState("Todas");
+  const [dashboardMes, setDashboardMes] = useState("2026-11"); // Controle de Horas Mensais (YYYY-MM ou "todos")
+  const HORAS_MENSAIS_POR_COLABORADOR = 176; // 44h semanais CLT x 4 semanas (8h diárias base, sem considerar hora extra)
   const [taskManagerObra, setTaskManagerObra] = useState(() => {
     const loaded = loadStorage("climapress_obras", INITIAL_OBRAS);
     return loaded[0]?.nome || "Sede Corporativa Nubank";
@@ -557,6 +585,7 @@ export default function App() {
         window.localStorage.removeItem("climapress_atividades");
         window.localStorage.removeItem("climapress_banco_horas");
         window.localStorage.removeItem("climapress_audit_logs");
+        window.localStorage.removeItem("climapress_obras_excluidas");
       } catch (e) {}
       setEquipe(INITIAL_EQUIPE);
       setCurrentUser(INITIAL_EQUIPE[0]);
@@ -564,6 +593,8 @@ export default function App() {
       setAtividades(INITIAL_ACTIVITIES_LIST);
       setBancoHoras(INITIAL_TIME_ENTRIES);
       setAuditLogs([]);
+      setObrasExcluidas([]);
+      setObrasViewTab("ativas");
       setTaskManagerObra(INITIAL_OBRAS[0]?.nome || "");
       setRaioXObra("Todas");
       setMinhasAtividadesObraFilter("Todas");
@@ -575,6 +606,7 @@ export default function App() {
   const [ganttObraFilter, setGanttObraFilter] = useState("Todas");
   const [ganttHeaderMode, setGanttHeaderMode] = useState("semanas"); // semanas | datas
   const [ganttPaperSize, setGanttPaperSize] = useState("A3"); // A4 | A3 | A2 | A1 | A0
+  const [ganttScrollPercent, setGanttScrollPercent] = useState(25);
 
   // Navigation scroll refs
   const headerNavRef = useRef(null);
@@ -600,7 +632,7 @@ export default function App() {
     atividade: "",
     fase: "Projetos",
     dias: 14,
-    resp1: "Engº Murilo Miranda da Silva",
+    resp1: "A Definir",
     resp2: "",
     resp3: "",
     percentual: 0,
@@ -634,15 +666,27 @@ export default function App() {
     senha: "123"
   });
 
-  // Time logging modal from Minhas Atividades
+  // Helper de data local (AAAA-MM-DD) sem problemas de fuso horário
+  const getRelativeDateStr = (daysAgo = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Time logging modal from Minhas Atividades & Apontamento de Horas
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
   const [activeTaskForTime, setActiveTaskForTime] = useState(null);
   const [newTimeEntry, setNewTimeEntry] = useState({
-    data: new Date().toISOString().split("T")[0],
+    data: getRelativeDateStr(0),
     horaInicio: "08:00",
     horaFim: "18:00",
     intervaloMin: 60,
-    descricao: ""
+    descricao: "",
+    colaboradorId: 1,
+    colaboradorNome: ""
   });
 
   // Role booleans
@@ -652,7 +696,7 @@ export default function App() {
 
   // Enforce collaborator route protection (Visualizadores podem ver todas as abas assim como coordenadores)
   useEffect(() => {
-    const restrictedTabs = ["dashboard", "gestao_obras", "gestao_tarefas", "matriz", "gantt"];
+    const restrictedTabs = ["dashboard", "gestao_obras", "gestao_tarefas", "horas", "matriz", "gantt"];
     if (isCollaborator && restrictedTabs.includes(currentTab)) {
       setCurrentTab("minhas");
     }
@@ -669,6 +713,51 @@ export default function App() {
       setIsRefreshing(false);
       showFeedback("Dados do sistema e cálculos atualizados com sucesso!");
     }, 600);
+  };
+
+  // --- CÁLCULO DE CAPACIDADE DE ENGENHARIA (44H/SEM = 176H/MÊS POR COLABORADOR) E CRUZAMENTO COM DEMANDA ---
+  const MESES_OPCOES = useMemo(() => [
+    { id: "2026-10", nome: "Outubro / 2026", mesAbrev: "Out/26" },
+    { id: "2026-11", nome: "Novembro / 2026 (Mês Atual)", mesAbrev: "Nov/26" },
+    { id: "2026-12", nome: "Dezembro / 2026", mesAbrev: "Dez/26" },
+    { id: "2027-01", nome: "Janeiro / 2027", mesAbrev: "Jan/27" },
+    { id: "2027-02", nome: "Fevereiro / 2027", mesAbrev: "Fev/27" },
+    { id: "todos", nome: "Todos os Meses (Consolidado)", mesAbrev: "Geral" }
+  ], []);
+
+  // Time operacional de engenharia (exclui perfil de Diretoria/Visualizador)
+  const equipeTecnica = useMemo(() => {
+    return equipe.filter(u => u.role !== "Visualizador");
+  }, [equipe]);
+
+  // Função para calcular as horas de uma tarefa demandadas em um mês específico (distribuição por overlap de calendário - 100% blindada contra nulos e NaN)
+  const getTaskHoursInMonth = (act, mesAno) => {
+    if (!act) return 0;
+    if (!mesAno || mesAno === "todos") return (Number(act.dias) || 14) * 10;
+    if (!act.inicioPrevisto || !act.terminoPrevisto) return 0;
+
+    const parts = String(mesAno).split("-");
+    if (parts.length < 2) return (Number(act.dias) || 14) * 10;
+    const ano = Number(parts[0]);
+    const mes = Number(parts[1]);
+    if (isNaN(ano) || isNaN(mes) || mes < 1 || mes > 12) return 0;
+
+    const mStart = new Date(ano, mes - 1, 1).getTime();
+    const mEnd = new Date(ano, mes, 0, 23, 59, 59).getTime(); // Último dia do mês
+
+    const tStart = new Date(act.inicioPrevisto + "T00:00:00").getTime();
+    const tEnd = new Date(act.terminoPrevisto + "T23:59:59").getTime();
+
+    if (isNaN(tStart) || isNaN(tEnd) || tEnd < mStart || tStart > mEnd) return 0;
+
+    const overlapStart = Math.max(tStart, mStart);
+    const overlapEnd = Math.min(tEnd, mEnd);
+    const overlapDays = Math.max(1, Math.round((overlapEnd - overlapStart) / 86400000) + 1);
+
+    const totalTaskDays = Math.max(1, Math.round((tEnd - tStart) / 86400000) + 1);
+    const totalHours = (Number(act.dias) || totalTaskDays) * 10;
+
+    return Math.round((totalHours * (overlapDays / totalTaskDays)) * 10) / 10;
   };
 
   // --- STATS CALCULATIONS (MÉTRICAS CONSOLIDADAS E POR OBRA) ---
@@ -705,28 +794,53 @@ export default function App() {
   }, [obras, atividades, bancoHoras]);
 
   const resumoStat = useMemo(() => {
+    const isPeriodoEspecifico = resumoPeriodoFilter !== "todos";
+
     if (raioXObra === "Todas") {
-      const totalPrev = obrasStats.reduce((acc, o) => acc + o.horasPrevistas, 0);
-      const totalReal = Math.round(obrasStats.reduce((acc, o) => acc + o.horasRealizadas, 0) * 10) / 10;
-      const totalConc = obrasStats.reduce((acc, o) => acc + o.concluidas, 0);
-      const totalAndam = obrasStats.reduce((acc, o) => acc + o.emAndamento, 0);
-      const totalFut = obrasStats.reduce((acc, o) => acc + o.futuras, 0);
-      const mediaGlobal = obrasStats.length > 0
-        ? Math.round(obrasStats.reduce((acc, o) => acc + o.mediaPerc, 0) / obrasStats.length * 10) / 10
+      let totalPrev = 0;
+      let totalConc = 0;
+      let totalAndam = 0;
+      let totalFut = 0;
+
+      const filteredActs = atividades.filter(a => {
+        if (a.isNA) return false;
+        if (isPeriodoEspecifico) {
+          return getTaskHoursInMonth(a, resumoPeriodoFilter) > 0;
+        }
+        return true;
+      });
+
+      filteredActs.forEach(a => {
+        const hPrev = isPeriodoEspecifico ? getTaskHoursInMonth(a, resumoPeriodoFilter) : ((a.dias || 14) * 10);
+        totalPrev += hPrev;
+        if (a.percentual >= 100) totalConc++;
+        else if (a.percentual > 0) totalAndam++;
+        else totalFut++;
+      });
+
+      const totalReal = Math.round(
+        bancoHoras
+          .filter(b => isPeriodoEspecifico ? (b.data && b.data.startsWith(resumoPeriodoFilter)) : true)
+          .reduce((acc, curr) => acc + (curr.totalHoras || 0), 0) * 10
+      ) / 10;
+
+      const mediaGlobal = filteredActs.length > 0
+        ? Math.round(filteredActs.reduce((acc, a) => acc + a.percentual, 0) / filteredActs.length * 10) / 10
         : 0;
 
       return {
         cliente: "Todas as Obras / Multi-clientes",
-        horasPrevistas: totalPrev,
+        horasPrevistas: Math.round(totalPrev * 10) / 10,
         horasRealizadas: totalReal,
         concluidas: totalConc,
         emAndamento: totalAndam,
         futuras: totalFut,
-        mediaPerc: mediaGlobal
+        mediaPerc: mediaGlobal,
+        totalAtividades: filteredActs.length
       };
     }
 
-    const current = obrasStats.find((o) => o.nome === raioXObra);
+    const current = obras.find((o) => o.nome === raioXObra);
     if (!current) {
       return {
         cliente: "—",
@@ -735,20 +849,123 @@ export default function App() {
         concluidas: 0,
         emAndamento: 0,
         futuras: 0,
-        mediaPerc: 0
+        mediaPerc: 0,
+        totalAtividades: 0
       };
     }
 
+    const actsObra = atividades.filter(a => {
+      if (a.obraNome !== raioXObra || a.isNA) return false;
+      if (isPeriodoEspecifico) {
+        return getTaskHoursInMonth(a, resumoPeriodoFilter) > 0;
+      }
+      return true;
+    });
+
+    let prevObra = 0;
+    let conc = 0;
+    let andam = 0;
+    let fut = 0;
+
+    actsObra.forEach(a => {
+      const h = isPeriodoEspecifico ? getTaskHoursInMonth(a, resumoPeriodoFilter) : ((a.dias || 14) * 10);
+      prevObra += h;
+      if (a.percentual >= 100) conc++;
+      else if (a.percentual > 0) andam++;
+      else fut++;
+    });
+
+    const realObra = Math.round(
+      bancoHoras
+        .filter(b => b.obraNome === raioXObra && (isPeriodoEspecifico ? (b.data && b.data.startsWith(resumoPeriodoFilter)) : true))
+        .reduce((acc, curr) => acc + (curr.totalHoras || 0), 0) * 10
+    ) / 10;
+
+    const media = actsObra.length > 0
+      ? Math.round(actsObra.reduce((acc, a) => acc + a.percentual, 0) / actsObra.length * 10) / 10
+      : 0;
+
     return {
       cliente: current.cliente,
-      horasPrevistas: current.horasPrevistas,
-      horasRealizadas: current.horasRealizadas,
-      concluidas: current.concluidas,
-      emAndamento: current.emAndamento,
-      futuras: current.futuras,
-      mediaPerc: current.mediaPerc
+      horasPrevistas: Math.round(prevObra * 10) / 10,
+      horasRealizadas: realObra,
+      concluidas: conc,
+      emAndamento: andam,
+      futuras: fut,
+      mediaPerc: media,
+      totalAtividades: actsObra.length
     };
-  }, [raioXObra, obrasStats]);
+  }, [raioXObra, resumoPeriodoFilter, obras, atividades, bancoHoras]);
+
+  // Balanço Executivo de Horas (Capacidade 44h/sem x Demanda) para o Dashboard
+  const balancoHorasMes = useMemo(() => {
+    const numTecnicos = equipeTecnica.length;
+    const multiplicadorMeses = dashboardMes === "todos" ? 5 : 1;
+    const capacidadeTotalDisponivel = numTecnicos * HORAS_MENSAIS_POR_COLABORADOR * multiplicadorMeses;
+
+    let horasDemandadasTotal = 0;
+    const horasDemandadasPorObra = {};
+    obras.forEach(o => { horasDemandadasPorObra[o.nome] = 0; });
+
+    atividades.forEach(a => {
+      const hMes = getTaskHoursInMonth(a, dashboardMes);
+      horasDemandadasTotal += hMes;
+      if (horasDemandadasPorObra[a.obraNome] !== undefined) {
+        horasDemandadasPorObra[a.obraNome] += hMes;
+      }
+    });
+
+    horasDemandadasTotal = Math.round(horasDemandadasTotal * 10) / 10;
+
+    const horasRealizadasNoMes = Math.round(
+      bancoHoras
+        .filter(b => dashboardMes === "todos" ? true : (b.data && b.data.startsWith(dashboardMes)))
+        .reduce((acc, curr) => acc + (curr.totalHoras || 0), 0) * 10
+    ) / 10;
+
+    const saldoHoras = Math.round((capacidadeTotalDisponivel - horasDemandadasTotal) * 10) / 10;
+    const taxaOcupacao = capacidadeTotalDisponivel > 0
+      ? Math.round((horasDemandadasTotal / capacidadeTotalDisponivel) * 100)
+      : 0;
+
+    // Atividades sem profissional vinculado ("A Definir")
+    const tarefasPendentesAlocacao = atividades.filter(
+      a => !a.resp1 || a.resp1 === "A Definir" || a.resp1 === "(A Definir)"
+    );
+
+    // Comparativo mês a mês para gráfico/régua de capacidade
+    const comparativoMeses = MESES_OPCOES.filter(m => m.id !== "todos").map(m => {
+      const capMes = numTecnicos * HORAS_MENSAIS_POR_COLABORADOR;
+      const demMes = Math.round(
+        atividades.reduce((acc, a) => acc + getTaskHoursInMonth(a, m.id), 0) * 10
+      ) / 10;
+      const realMes = Math.round(
+        bancoHoras
+          .filter(b => b.data && b.data.startsWith(m.id))
+          .reduce((acc, curr) => acc + (curr.totalHoras || 0), 0) * 10
+      ) / 10;
+      const ocupMes = capMes > 0 ? Math.round((demMes / capMes) * 100) : 0;
+      return {
+        ...m,
+        capacidade: capMes,
+        demanda: demMes,
+        realizado: realMes,
+        ocupacao: ocupMes
+      };
+    });
+
+    return {
+      numTecnicos,
+      capacidadeTotalDisponivel,
+      horasDemandadasTotal,
+      horasRealizadasNoMes,
+      saldoHoras,
+      taxaOcupacao,
+      horasDemandadasPorObra,
+      tarefasPendentesAlocacao,
+      comparativoMeses
+    };
+  }, [dashboardMes, equipeTecnica, atividades, bancoHoras, obras]);
 
   // --- AUTENTICAÇÃO, LOGIN & GESTÃO DE SENHAS ---
   const handleLoginSubmit = (e) => {
@@ -857,11 +1074,32 @@ export default function App() {
       setEquipe(prev => [...prev, newUser]);
       showFeedback(`Profissional "${newUser.nome}" cadastrado com perfil ${newUser.role}!`);
     } else {
-      setEquipe(prev => prev.map(u => (u.id === editingUser.id ? { ...editingUser } : u)));
-      if (currentUser?.id === editingUser.id) {
-        setCurrentUser(editingUser);
+      const oldUser = equipe.find(u => u.id === editingUser.id);
+      const newName = editingUser.nome.trim();
+      const newEmail = editingUser.email.trim();
+
+      if (oldUser && oldUser.nome !== newName) {
+        const oldName = oldUser.nome;
+        // Atualiza em cascata o nome do responsável em todas as frentes técnicas
+        setAtividades(prev =>
+          prev.map(a => ({
+            ...a,
+            resp1: a.resp1 === oldName ? newName : a.resp1,
+            resp2: a.resp2 === oldName ? newName : a.resp2,
+            resp3: a.resp3 === oldName ? newName : a.resp3
+          }))
+        );
+        // Atualiza em cascata nos lançamentos do banco de horas
+        setBancoHoras(prev =>
+          prev.map(b => (b.colaboradorNome === oldName ? { ...b, colaboradorNome: newName } : b))
+        );
       }
-      showFeedback(`Dados de "${editingUser.nome}" atualizados com sucesso!`);
+
+      setEquipe(prev => prev.map(u => (u.id === editingUser.id ? { ...editingUser, nome: newName, email: newEmail } : u)));
+      if (currentUser?.id === editingUser.id) {
+        setCurrentUser({ ...editingUser, nome: newName, email: newEmail });
+      }
+      showFeedback(`Dados de "${newName}" atualizados com sucesso!`);
     }
     setIsUserModalOpen(false);
   };
@@ -1050,34 +1288,42 @@ export default function App() {
     showFeedback(`Progresso atualizado para ${numPerc}% com sucesso!`);
   };
 
-  // --- BIDIRECTIONAL SYNC FOR TASK MODAL DATES & DAYS ---
+  // --- BIDIRECTIONAL SYNC FOR TASK MODAL DATES & DAYS (BLINDADO CONTRA DESLOCAMENTO DE FUSO HORÁRIO) ---
   const handleTaskDaysChange = (newDays) => {
     const days = Math.max(1, parseInt(newDays) || 1);
-    const start = new Date(editingTask.inicioPrevisto || "2026-11-02");
+    const startStr = editingTask.inicioPrevisto || "2026-11-02";
+    const start = new Date(startStr.includes("T") ? startStr : startStr + "T12:00:00");
     const end = new Date(start);
     end.setDate(end.getDate() + days);
+    const year = end.getFullYear();
+    const month = String(end.getMonth() + 1).padStart(2, "0");
+    const day = String(end.getDate()).padStart(2, "0");
     setEditingTask(prev => ({
       ...prev,
       dias: days,
-      terminoPrevisto: end.toISOString().split("T")[0]
+      terminoPrevisto: `${year}-${month}-${day}`
     }));
   };
 
   const handleTaskInicioChange = (newInicio) => {
-    const start = new Date(newInicio);
-    const days = editingTask.dias || 14;
+    const start = new Date(newInicio + "T12:00:00");
+    const days = Number(editingTask.dias) || 14;
     const end = new Date(start);
     end.setDate(end.getDate() + days);
+    const year = end.getFullYear();
+    const month = String(end.getMonth() + 1).padStart(2, "0");
+    const day = String(end.getDate()).padStart(2, "0");
     setEditingTask(prev => ({
       ...prev,
       inicioPrevisto: newInicio,
-      terminoPrevisto: end.toISOString().split("T")[0]
+      terminoPrevisto: `${year}-${month}-${day}`
     }));
   };
 
   const handleTaskTerminoChange = (newTermino) => {
-    const start = new Date(editingTask.inicioPrevisto || "2026-11-02");
-    const end = new Date(newTermino);
+    const startStr = editingTask.inicioPrevisto || "2026-11-02";
+    const start = new Date(startStr + "T12:00:00");
+    const end = new Date(newTermino + "T12:00:00");
     const diffTime = end.getTime() - start.getTime();
     const diffDays = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
     setEditingTask(prev => ({
@@ -1097,11 +1343,13 @@ export default function App() {
 
     if (taskModalMode === "create") {
       const nextId = Math.max(...atividades.map(a => a.id), 0) + 1;
+      const resp1Value = editingTask.resp1?.trim() || "A Definir";
       const newTask = {
         ...editingTask,
         id: nextId,
         obraNome: taskManagerObra,
         atividade: editingTask.atividade.trim().toUpperCase(),
+        resp1: resp1Value,
         percentual: Number(editingTask.percentual) || 0,
         dias: Number(editingTask.dias) || 14,
         lastUpdated: new Date().toISOString().split("T")[0]
@@ -1114,7 +1362,7 @@ export default function App() {
           {
             id: Date.now(),
             colaboradorId: currentUser?.id || 1,
-            colaboradorNome: newTask.resp1 || currentUser?.nome,
+            colaboradorNome: newTask.resp1 !== "A Definir" ? newTask.resp1 : currentUser?.nome,
             obraNome: newTask.obraNome,
             atividadeNome: newTask.atividade,
             data: new Date().toISOString().split("T")[0],
@@ -1128,10 +1376,17 @@ export default function App() {
           ...prev
         ]);
       }
-      showFeedback(`Tarefa criada com sucesso em "${taskManagerObra}" e vinculada aos responsáveis!`);
+      showFeedback(`Tarefa criada com sucesso em "${taskManagerObra}"${resp1Value === "A Definir" ? " (Pendente de Alocação de Responsável)" : ""}!`);
     } else {
       setAtividades(prev =>
-        prev.map(a => (a.id === editingTask.id ? { ...editingTask, lastUpdated: new Date().toISOString().split("T")[0] } : a))
+        prev.map(a => (a.id === editingTask.id ? { 
+          ...editingTask, 
+          atividade: editingTask.atividade.trim().toUpperCase(),
+          resp1: editingTask.resp1?.trim() || "A Definir",
+          percentual: Number(editingTask.percentual) || 0,
+          dias: Number(editingTask.dias) || 14,
+          lastUpdated: new Date().toISOString().split("T")[0] 
+        } : a))
       );
       showFeedback("Tarefa atualizada com sucesso!");
     }
@@ -1175,6 +1430,8 @@ export default function App() {
         setBancoHoras(prev => prev.map(b => (b.obraNome === oldName ? { ...b, obraNome: newName } : b)));
         if (taskManagerObra === oldName) setTaskManagerObra(newName);
         if (raioXObra === oldName) setRaioXObra(newName);
+        if (minhasAtividadesObraFilter === oldName) setMinhasAtividadesObraFilter(newName);
+        if (ganttObraFilter === oldName) setGanttObraFilter(newName);
       }
       setObras(prev => prev.map(o => (o.id === editingObra.id ? { ...editingObra, nome: editingObra.nome.trim(), cliente: editingObra.cliente.trim() } : o)));
       showFeedback(`Dados da obra "${editingObra.nome}" atualizados!`);
@@ -1182,21 +1439,36 @@ export default function App() {
     setIsObraModalOpen(false);
   };
 
-  // Cascade delete Obra with Coordinator password validation & audit logging
+  // Cascade delete Obra with 30-Day Recovery Period (Lixeira / Quarentena) & audit logging
   const handleExecuteDeleteObra = (e) => {
     e.preventDefault();
     if (!obraToDelete) return;
 
-    if (deleteObraPassword !== currentUser?.senha) {
+    if (deleteObraPassword.trim() !== currentUser?.senha?.trim()) {
       setDeleteObraError("Senha incorreta. A exclusão de uma obra exige validação da senha do coordenador.");
       return;
     }
 
     const obraNome = obraToDelete.nome;
-    const tasksCount = atividades.filter(a => a.obraNome === obraNome).length;
-    const hoursCount = bancoHoras.filter(b => b.obraNome === obraNome).length;
+    const tasksOfObra = atividades.filter(a => a.obraNome === obraNome);
+    const hoursOfObra = bancoHoras.filter(b => b.obraNome === obraNome);
 
-    // Delete cascading
+    // Salvar registro completo na Lixeira com quarentena de 30 dias para cancelamento/restauração
+    const deletedRecord = {
+      id: Date.now(),
+      obraOriginalId: obraToDelete.id,
+      obra: { ...obraToDelete },
+      atividades: tasksOfObra,
+      bancoHoras: hoursOfObra,
+      deletedAt: new Date().toISOString(),
+      deletedBy: currentUser?.nome || "Coordenador",
+      deletedByEmail: currentUser?.email || "",
+      diasRetencao: 30
+    };
+
+    setObrasExcluidas(prev => [deletedRecord, ...prev]);
+
+    // Remover das visões operacionais ativas
     setObras(prev => prev.filter(o => o.id !== obraToDelete.id));
     setAtividades(prev => prev.filter(a => a.obraNome !== obraNome));
     setBancoHoras(prev => prev.filter(b => b.obraNome !== obraNome));
@@ -1208,7 +1480,7 @@ export default function App() {
       coordenadorNome: currentUser?.nome,
       coordenadorEmail: currentUser?.email,
       timestamp: new Date().toLocaleString("pt-BR"),
-      detalhes: `Exclusão total em cascata: ${tasksCount} frentes técnicas e ${hoursCount} apontamentos removidos.`
+      detalhes: `Obra movida para a Lixeira (30 dias para restauração): ${tasksOfObra.length} frentes técnicas e ${hoursOfObra.length} apontamentos preservados.`
     };
     setAuditLogs(prev => [newLog, ...prev]);
 
@@ -1219,32 +1491,157 @@ export default function App() {
     if (raioXObra === obraNome) {
       setRaioXObra("Todas");
     }
+    if (minhasAtividadesObraFilter === obraNome) {
+      setMinhasAtividadesObraFilter("Todas");
+    }
+    if (ganttObraFilter === obraNome) {
+      setGanttObraFilter("Todas");
+    }
 
-    showFeedback(`Obra "${obraNome}" e todo o seu escopo foram excluídos com sucesso.`);
+    showFeedback(`Obra "${obraNome}" movida para a Lixeira. Você tem até 30 dias para cancelar a exclusão!`);
     setIsDeleteObraModalOpen(false);
     setObraToDelete(null);
     setDeleteObraPassword("");
     setDeleteObraError("");
   };
 
-  // Time logging submission
+  // Cancelar Exclusão e Restaurar Obra da Lixeira (Período de 30 dias)
+  const handleRestoreObra = (record) => {
+    if (!record || !record.obra) return;
+    const obraNome = record.obra.nome;
+
+    // Verificar se já não existe outra obra ativa com o mesmo nome
+    if (obras.some(o => o.nome.toLowerCase() === obraNome.toLowerCase())) {
+      alert(`Já existe uma obra ativa cadastrada com o nome "${obraNome}". Altere o nome antes de restaurar.`);
+      return;
+    }
+
+    // Restaurar obra, atividades e banco de horas garantindo integridade de IDs
+    setObras(prev => [...prev, record.obra]);
+    if (record.atividades && record.atividades.length > 0) {
+      setAtividades(prev => {
+        const existingIds = new Set(prev.map(a => a.id));
+        let maxId = Math.max(...prev.map(a => a.id), 0);
+        const safeActs = record.atividades.map(a => {
+          if (existingIds.has(a.id)) {
+            maxId++;
+            return { ...a, id: maxId };
+          }
+          return a;
+        });
+        return [...prev, ...safeActs];
+      });
+    }
+    if (record.bancoHoras && record.bancoHoras.length > 0) {
+      setBancoHoras(prev => {
+        const existingIds = new Set(prev.map(b => b.id));
+        let maxId = Math.max(...prev.map(b => b.id), 0);
+        const safeHours = record.bancoHoras.map(b => {
+          if (existingIds.has(b.id)) {
+            maxId++;
+            return { ...b, id: maxId };
+          }
+          return b;
+        });
+        return [...prev, ...safeHours];
+      });
+    }
+
+    // Remover da lixeira
+    setObrasExcluidas(prev => prev.filter(item => item.id !== record.id));
+
+    // Log de auditoria da restauração
+    const restoreLog = {
+      id: Date.now(),
+      obraNome,
+      coordenadorNome: currentUser?.nome,
+      coordenadorEmail: currentUser?.email,
+      timestamp: new Date().toLocaleString("pt-BR"),
+      detalhes: `Exclusão cancelada (Obra restaurada da lixeira). ${record.atividades?.length || 0} frentes e ${record.bancoHoras?.length || 0} apontamentos recuperados.`
+    };
+    setAuditLogs(prev => [restoreLog, ...prev]);
+
+    showFeedback(`Exclusão cancelada com sucesso! A obra "${obraNome}" e todo o seu escopo foram restaurados.`);
+  };
+
+  // Excluir Definitivamente da Lixeira (Expurgo Permanente)
+  const handlePurgeObra = (recordId) => {
+    const itemToPurge = obrasExcluidas.find(item => item.id === recordId);
+    const nome = itemToPurge?.obra?.nome || "Empreendimento";
+    if (window.confirm(`Tem certeza que deseja excluir DEFINITIVAMENTE a obra "${nome}"? Esta ação é irreversível e expurgará todos os dados associados.`)) {
+      setObrasExcluidas(prev => prev.filter(item => item.id !== recordId));
+      showFeedback(`Obra "${nome}" expurgada definitivamente da base de dados.`);
+    }
+  };
+
+  // Abrir modal de apontamento a partir de uma atividade específica (Minhas Atividades)
+  const handleOpenTimeModalForTask = (act) => {
+    setActiveTaskForTime(act);
+    setNewTimeEntry({
+      data: getRelativeDateStr(0),
+      horaInicio: "08:00",
+      horaFim: "18:00",
+      intervaloMin: 60,
+      descricao: "",
+      colaboradorId: currentUser?.id || 1,
+      colaboradorNome: currentUser?.nome || "Engº Murilo Miranda da Silva"
+    });
+    setIsTimeModalOpen(true);
+  };
+
+  // Abrir modal de apontamento direto (Aba Apontamento de Horas)
+  const handleOpenDirectTimeModal = () => {
+    const defaultObra = taskManagerObra || obras[0]?.nome || "Sede Corporativa Nubank";
+    const obraTasks = atividades.filter(a => a.obraNome === defaultObra);
+    const defaultTask = obraTasks[0] || atividades[0] || null;
+
+    setActiveTaskForTime(defaultTask || {
+      id: 0,
+      obraNome: defaultObra,
+      atividade: "Apontamento Geral de Campo",
+      percentual: 0
+    });
+    setNewTimeEntry({
+      data: getRelativeDateStr(0),
+      horaInicio: "08:00",
+      horaFim: "18:00",
+      intervaloMin: 60,
+      descricao: "",
+      colaboradorId: currentUser?.id || 1,
+      colaboradorNome: currentUser?.nome || "Engº Murilo Miranda da Silva"
+    });
+    setIsTimeModalOpen(true);
+  };
+
+  // Time logging submission (Permite lançamento no dia de hoje e em qualquer data retroativa)
   const handleSaveTimeEntry = (e) => {
     e.preventDefault();
-    if (!activeTaskForTime) return;
+    if (!activeTaskForTime || !activeTaskForTime.obraNome || !activeTaskForTime.atividade) {
+      alert("Selecione a obra e a atividade técnica.");
+      return;
+    }
 
-    const [hI, mI] = newTimeEntry.horaInicio.split(":").map(Number);
-    const [hF, mF] = newTimeEntry.horaFim.split(":").map(Number);
-    let diffMinutes = ((hF * 60) + mF) - ((hI * 60) + mI) - (Number(newTimeEntry.intervaloMin) || 0);
+    const [hI, mI] = (newTimeEntry.horaInicio || "08:00").split(":").map(Number);
+    const [hF, mF] = (newTimeEntry.horaFim || "18:00").split(":").map(Number);
+    let diffMinutes = ((hF * 60) + mF) - ((hI * 60) + mI);
+    if (diffMinutes < 0) {
+      // Suporte para turnos noturnos em data centers e hospitais que viram a noite (ex: 22:00 às 06:00)
+      diffMinutes += 24 * 60;
+    }
+    diffMinutes -= (Number(newTimeEntry.intervaloMin) || 0);
     if (diffMinutes <= 0) diffMinutes = 60;
     const totalHorasCalculadas = Math.round((diffMinutes / 60) * 10) / 10;
 
+    const chosenColabNome = newTimeEntry.colaboradorNome || currentUser?.nome || "Engº Murilo Miranda da Silva";
+    const matchedColab = equipe.find(u => u.nome === chosenColabNome);
+
     const entry = {
       id: Date.now(),
-      colaboradorId: currentUser?.id || 1,
-      colaboradorNome: currentUser?.nome,
+      colaboradorId: matchedColab?.id || currentUser?.id || 1,
+      colaboradorNome: chosenColabNome,
       obraNome: activeTaskForTime.obraNome,
       atividadeNome: activeTaskForTime.atividade,
-      data: newTimeEntry.data,
+      data: newTimeEntry.data || getRelativeDateStr(0),
       horaInicio: newTimeEntry.horaInicio,
       horaFim: newTimeEntry.horaFim,
       intervaloMin: Number(newTimeEntry.intervaloMin) || 0,
@@ -1255,14 +1652,47 @@ export default function App() {
 
     setBancoHoras(prev => [entry, ...prev]);
 
-    // If activity was 0%, mark it in progress (25%)
-    if (activeTaskForTime.percentual === 0) {
-      handleUpdateProgress(activeTaskForTime.id, 25, "Iniciado trabalho técnico na frente.");
-    }
+    // Atualização automática de início e avanço da atividade para qualquer profissional (Colaborador ou Coordenador)
+    setAtividades(prev =>
+      prev.map(a => {
+        const isMatch = (activeTaskForTime.id && a.id === activeTaskForTime.id) ||
+                        (a.obraNome === activeTaskForTime.obraNome && a.atividade === activeTaskForTime.atividade);
+        if (isMatch) {
+          const hPrev = (a.dias || 14) * 10;
+          const hJaGastas = bancoHoras
+            .filter(b => b.obraNome === a.obraNome && b.atividadeNome === a.atividade)
+            .reduce((acc, curr) => acc + (curr.totalHoras || 0), 0);
+          const totalComNovo = hJaGastas + totalHorasCalculadas;
+          const pCalculado = hPrev > 0 ? Math.round((totalComNovo / hPrev) * 100) : 0;
+          
+          // Se estava em 0%, inicia a atividade com no mínimo 15% ou percentual proporcional de horas
+          const novoP = a.percentual === 0
+            ? Math.max(15, Math.min(95, pCalculado))
+            : Math.max(a.percentual, Math.min(95, pCalculado));
 
-    showFeedback(`${totalHorasCalculadas}h registradas com sucesso em "${activeTaskForTime.atividade}"!`);
+          return {
+            ...a,
+            percentual: novoP,
+            lastUpdated: new Date().toISOString().split("T")[0]
+          };
+        }
+        return a;
+      })
+    );
+
+    showFeedback(`${totalHorasCalculadas}h apontadas com sucesso para ${chosenColabNome} na data ${entry.data}!`);
     setIsTimeModalOpen(false);
     setActiveTaskForTime(null);
+  };
+
+  // Estornar / Excluir apontamento de horas (liberado para Coordenadores)
+  const handleDeleteTimeEntry = (entryId) => {
+    const entry = bancoHoras.find(b => b.id === entryId);
+    if (!entry) return;
+    if (window.confirm(`Deseja estornar o apontamento de ${entry.totalHoras}h de "${entry.colaboradorNome}" na obra "${entry.obraNome}" (${entry.data})?`)) {
+      setBancoHoras(prev => prev.filter(b => b.id !== entryId));
+      showFeedback(`Apontamento de ${entry.totalHoras}h estornado com sucesso.`);
+    }
   };
 
   // --- REPORT EXPORTERS (BUG-04 RESOLUTION: IMPRESSÃO DIRETA SEM BLOQUEIO DE POPUP) ---
@@ -1641,6 +2071,31 @@ export default function App() {
     }
   };
 
+  const scrollGanttToPercent = (pct) => {
+    if (ganttScrollRef.current) {
+      const el = ganttScrollRef.current;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      el.scrollTo({ left: (pct / 100) * maxScroll, behavior: "smooth" });
+      setGanttScrollPercent(pct);
+    }
+  };
+
+  const scrollGanttToWeek = (weekIndex) => {
+    if (ganttScrollRef.current) {
+      const targetLeft = Math.max(0, weekIndex * 85);
+      ganttScrollRef.current.scrollTo({ left: targetLeft, behavior: "smooth" });
+    }
+  };
+
+  const handleGanttScrollEvent = (e) => {
+    const el = e.currentTarget;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll > 0) {
+      const currentPct = Math.round((el.scrollLeft / maxScroll) * 100);
+      setGanttScrollPercent(currentPct);
+    }
+  };
+
   // Handler para convidar / cadastrar usuário rapidamente
   const handleInviteUser = (e) => {
     e.preventDefault();
@@ -1757,9 +2212,18 @@ export default function App() {
             
             {showDemoLogins && (
               <>
-                <p className="text-[10px] text-slate-400 leading-tight">
-                  * Este painel de atalhos rápidos existe apenas para facilitar a simulação dos 3 níveis de permissão durante os testes de desenvolvimento.
-                </p>
+                <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-[10px] text-amber-900 leading-relaxed space-y-1">
+                  <div className="font-bold flex items-center gap-1 text-amber-800">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-600" />
+                    <span>Ambiente de Homologação & Testes</span>
+                  </div>
+                  <p>
+                    As senhas e atalhos rápidos abaixo existem <strong>exclusivamente para facilidade de testes</strong> e homologação das permissões (Coordenador, Colaborador e Visualizador).
+                  </p>
+                  <p className="text-slate-500 font-semibold">
+                    * Em produção definitiva, as senhas são individuais, criptografadas e nunca exibidas.
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 gap-1.5 pt-1">
                   {equipe.map(colab => (
                     <button
@@ -1812,24 +2276,24 @@ export default function App() {
         </div>
       )}
 
-      {/* HEADER PRINCIPAL */}
-      <header className="bg-[#15365C] text-white shadow-md sticky top-0 z-40 print:hidden">
-        <div className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-5 lg:px-6">
+      {/* HEADER PRINCIPAL - ALTO CONTRASTE EXECUTIVO PARA LOGO CLIMAPRESS */}
+      <header className="bg-white text-slate-800 shadow-sm border-b border-slate-200 sticky top-0 z-40 print:hidden">
+        <div className="w-full px-3 sm:px-6 lg:px-8 mx-auto">
           <div className="flex items-center justify-between h-16 gap-3">
-            {/* Logo Oficial Climapress em cápsula de alto contraste */}
+            {/* Logo Oficial Climapress com contraste total no fundo branco */}
             <div 
               className="flex items-center gap-3 flex-shrink-0 cursor-pointer group" 
               onClick={() => setCurrentTab(isCoordinator || isViewer ? "dashboard" : "minhas")}
               title="Climapress Engenharia"
             >
-              <div className="bg-white/95 group-hover:bg-white px-2.5 py-1.5 rounded-xl shadow-md border border-white/30 transition-transform group-hover:scale-105 flex items-center">
-                <ClimapressLogo className="h-8 sm:h-9 w-auto" />
+              <div className="p-1 transition-transform group-hover:scale-105 flex items-center">
+                <ClimapressLogo className="h-9 sm:h-10 w-auto" />
               </div>
-              <div className="hidden md:block pl-2 border-l border-blue-900/60">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 block">
+              <div className="hidden md:block pl-3 border-l border-slate-200">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#15365C] block">
                   Sistema Integrado de Engenharia
                 </span>
-                <span className="text-xs font-semibold text-slate-300">HVAC & Controle Físico-Financeiro</span>
+                <span className="text-xs font-semibold text-slate-500">HVAC & Controle Físico-Financeiro</span>
               </div>
             </div>
 
@@ -1839,10 +2303,10 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleResetToDemo}
-                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-700/50 rounded-lg text-xs font-bold transition active:scale-95"
+                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition active:scale-95"
                   title="Restaurar toda a base de dados para o padrão oficial de demonstração"
                 >
-                  <RefreshCw className="w-3 h-3 text-rose-300" />
+                  <RefreshCw className="w-3 h-3 text-rose-500" />
                   <span>Reset Demo</span>
                 </button>
               )}
@@ -1850,16 +2314,16 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleGlobalRefresh}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#15365C] border border-slate-200 rounded-lg text-xs font-bold transition active:scale-95"
                 title="Atualizar dados e recalcular índices"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-amber-300 ${isRefreshing ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isRefreshing ? "animate-spin" : ""}`} />
                 <span className="hidden sm:inline">Atualizar</span>
               </button>
 
               <div
                 onClick={() => setCurrentTab("meu_perfil")}
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-lg cursor-pointer transition"
+                className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer transition shadow-xs"
                 title="Meu Perfil"
               >
                 <div className={`w-7 h-7 rounded-full text-white font-bold text-xs flex items-center justify-center ${
@@ -1868,10 +2332,10 @@ export default function App() {
                   {currentUser?.nome?.charAt(0) || "U"}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <div className="text-xs font-bold leading-tight truncate max-w-[130px]">{currentUser?.nome}</div>
-                  <div className="text-[10px] text-amber-300 font-semibold uppercase flex items-center gap-1">
+                  <div className="text-xs font-bold leading-tight truncate max-w-[130px] text-slate-800">{currentUser?.nome}</div>
+                  <div className="text-[10px] text-amber-600 font-bold uppercase flex items-center gap-1">
                     {currentUser?.role}
-                    {isViewer && <Eye className="w-2.5 h-2.5 text-purple-300 inline" />}
+                    {isViewer && <Eye className="w-2.5 h-2.5 text-purple-600 inline" />}
                   </div>
                 </div>
               </div>
@@ -1886,7 +2350,7 @@ export default function App() {
                     showFeedback(`Sessão alterada para: ${targetUser.nome} (${targetUser.role})`);
                   }
                 }}
-                className="px-2 py-1 bg-amber-400 hover:bg-amber-300 text-[#15365C] rounded text-[11px] font-black uppercase tracking-wider transition border-none cursor-pointer outline-none"
+                className="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-lg text-[11px] font-black uppercase tracking-wider transition border border-amber-500/40 shadow-xs cursor-pointer outline-none"
                 title="Alternar entre perfis para teste de permissões"
               >
                 {equipe.map(u => (
@@ -1900,7 +2364,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-700/80 hover:bg-rose-600 text-white rounded-lg text-xs font-bold transition active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition active:scale-95 shadow-xs"
                 title="Encerrar sessão atual e voltar para a tela de login"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -1911,8 +2375,8 @@ export default function App() {
         </div>
 
         {/* NAVEGAÇÃO HORIZONTAL SUAVE COM SETAS LATERAIS */}
-        <div className="bg-[#0e243d] border-t border-blue-900/40 relative">
-          <div className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-2 sm:px-4 flex items-center relative">
+        <div className="bg-[#15365C] border-t border-slate-200 relative">
+          <div className="w-full px-2 sm:px-6 flex items-center relative">
             <button
               type="button"
               onClick={() => scrollNav("left")}
@@ -1983,22 +2447,21 @@ export default function App() {
                       {isViewer ? "LEITURA" : "COORD"}
                     </span>
                   </button>
-                </>
-              )}
 
-              <button
-                type="button"
-                onClick={() => setCurrentTab("horas")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex-shrink-0 ${
-                  currentTab === "horas" ? "bg-[#E52329] text-white shadow" : "text-slate-300 hover:bg-white/10"
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>Apontamento de Horas</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentTab("horas")}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex-shrink-0 ${
+                      currentTab === "horas" ? "bg-[#E52329] text-white shadow" : "text-slate-300 hover:bg-white/10"
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Apontamento de Horas</span>
+                    <span className="text-[9px] bg-amber-400 text-[#15365C] px-1 py-0.2 rounded font-black">
+                      {isViewer ? "LEITURA" : "GESTÃO"}
+                    </span>
+                  </button>
 
-              {(isCoordinator || isViewer) && (
-                <>
                   <button
                     type="button"
                     onClick={() => setCurrentTab("matriz")}
@@ -2054,8 +2517,8 @@ export default function App() {
       </header>
 
       {/* BARRA DE EXPORTAÇÃO MULTI-FORMATO (PDF, WORD, EXCEL) */}
-      <div className="bg-white border-b border-slate-200 py-2.5 px-3 sm:px-5 shadow-sm print:hidden">
-        <div className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-white border-b border-slate-200 py-2.5 px-3 sm:px-6 shadow-xs print:hidden">
+        <div className="w-full flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
             <FileText className="w-4 h-4 text-[#15365C]" />
             <span className="uppercase tracking-wider">Exportar Relatório desta Aba ({currentTab.toUpperCase()}):</span>
@@ -2094,416 +2557,961 @@ export default function App() {
         </div>
       </div>
 
-      {/* CONTEÚDO PRINCIPAL DINÂMICO - WIDE CONTAINER EXPANDIDO */}
-      <main className="w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-5 lg:px-6 py-6 flex-1 space-y-6">
+      {/* CONTEÚDO PRINCIPAL DINÂMICO - WIDE FLUID TOTAL (APROVEITAMENTO MÁXIMO DA TELA) */}
+      <main className="w-full px-2 sm:px-4 lg:px-6 py-4 flex-1 space-y-5 max-w-full">
         {/* ========================================================= */}
         {/* ABA: DASHBOARD EXECUTIVO (COORDENADOR OU VISUALIZADOR)     */}
         {/* ========================================================= */}
         {currentTab === "dashboard" && (isCoordinator || isViewer) && (
-          <div className="space-y-6">
-            {/* MÓDULO RESUMO DE ATIVIDADES */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-[#15365C] px-5 py-3 text-white flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <PlayCircle className="w-5 h-5 text-amber-300" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider">
-                    Resumo de Atividades — Controle Físico e Horas
-                  </h3>
+          <div className="space-y-5 animate-fade-in">
+            {/* 1. BARRA DE CONTROLE MASTER & FILTROS UNIFICADOS (COCKPIT HEADER) */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                {/* Identificação Executiva */}
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-[#15365C] text-white rounded-xl shadow-xs flex-shrink-0">
+                    <BarChart2 className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-black text-[#15365C]">
+                        Painel Executivo & Balanço Operacional
+                      </h2>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-[#15365C] border border-blue-200">
+                        CLT 44h/Sem (8h/dia) • Sem Hora Extra
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Capacidade nominal de engenharia x demanda consolidada dos empreendimentos
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-blue-200 uppercase tracking-wider">Filtro Atual:</span>
-                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#E52329] text-white">
-                    {raioXObra}
-                  </span>
+
+                {/* Seletor de Modo de Exibição (Segmented Control Fluido) */}
+                <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 text-xs font-bold self-start lg:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setDashboardViewTab("cockpit")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer ${
+                      dashboardViewTab === "cockpit"
+                        ? "bg-[#15365C] text-white shadow-xs font-black"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    <span>Capacidade CLT</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDashboardViewTab("raiox")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer ${
+                      dashboardViewTab === "raiox"
+                        ? "bg-[#15365C] text-white shadow-xs font-black"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Raio-X das Obras</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDashboardViewTab("completo")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer ${
+                      dashboardViewTab === "completo"
+                        ? "bg-[#15365C] text-white shadow-xs font-black"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    <span>Visão Unificada</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-100">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <label htmlFor="select-raiox-obra" className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Filtrar Empreendimento / Obra:
-                    </label>
-                    <select
-                      id="select-raiox-obra"
-                      value={raioXObra}
-                      onChange={(e) => {
-                        setRaioXObra(e.target.value);
-                        setResumoCardFilter("todos");
-                      }}
-                      className="p-2 border border-slate-300 rounded-lg font-bold text-sm text-[#15365C] bg-amber-50/50 focus:outline-none focus:ring-2 focus:ring-[#15365C]"
-                    >
-                      <option value="Todas">🌐 Todas as Obras (Visão Consolidada)</option>
-                      {obras.map(o => (
-                        <option key={o.id} value={o.nome}>{o.nome} ({o.cliente})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <span className="text-xs text-slate-500 italic">
-                    {raioXObra === "Todas"
-                      ? "* Exibindo o panorama consolidado com o resumo individual de cada obra logo abaixo"
-                      : "* Clique nos botões para filtrar as atividades correspondentes"}
+              {/* Seletor Rápido de Mês em Chips / Pills Horizontais */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs font-black text-slate-500 mr-1 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-[#15365C]" />
+                    Mês de Referência:
                   </span>
+                  {MESES_OPCOES.map((m) => {
+                    const isSelected = dashboardMes === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setDashboardMes(m.id);
+                          setResumoPeriodoFilter(m.id);
+                        }}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 ${
+                          isSelected
+                            ? "bg-[#15365C] text-white shadow-xs ring-2 ring-[#15365C]/20"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
+                        }`}
+                      >
+                        {m.id === "2026-11" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />}
+                        <span>{m.mesAbrev}</span>
+                        {m.id === "2026-11" && <span className="text-[10px] opacity-80">(Atual)</span>}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* VISÃO QUANDO "TODAS AS OBRAS" ESTIVER SELECIONADA: EXIBE APENAS A OPÇÃO CLIENTE/ESCOPO */}
-                {raioXObra === "Todas" ? (
-                  <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-blue-50/60 rounded-xl border border-slate-200 gap-4">
-                    <div className="flex items-center gap-3.5">
-                      <div className="p-3 bg-[#15365C] text-white rounded-xl shadow-sm">
-                        <Building2 className="w-6 h-6 text-amber-300" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider block">
-                          Cliente / Escopo Consolidado
-                        </span>
-                        <h4 className="text-lg font-black text-[#15365C] uppercase">
-                          {resumoStat.cliente} ({obras.length} Empreendimentos)
-                        </h4>
-                        <p className="text-xs text-slate-600">
-                          {resumoStat.horasPrevistas}h previstas no escopo total • {resumoStat.horasRealizadas}h realizadas ({resumoStat.mediaPerc}% concluído)
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-lg">
-                        {resumoStat.concluidas} Concluídas
-                      </span>
-                      <span className="text-xs font-bold text-amber-800 bg-amber-100 px-3 py-1.5 rounded-lg">
-                        {resumoStat.emAndamento} Em Andamento
-                      </span>
-                      <span className="text-xs font-bold text-slate-700 bg-slate-200 px-3 py-1.5 rounded-lg">
-                        {resumoStat.futuras} Futuras
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  /* VISÃO OBRA INDIVIDUAL: BOTÕES INTERATIVOS COM FRENTES FUTURAS E % CONCLUSÃO REAL NA EXTREMIDADE DIREITA */
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-center">
-                    {/* 1. Card Cliente / Escopo */}
-                    <button
-                      type="button"
-                      onClick={() => setResumoCardFilter("todos")}
-                      className={`p-3 rounded-lg border transition cursor-pointer active:scale-95 ${
-                        resumoCardFilter === "todos"
-                          ? "bg-[#15365C] text-white border-[#15365C] shadow-md ring-2 ring-blue-300"
-                          : "bg-slate-50 hover:bg-blue-50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "todos" ? "text-blue-200" : "text-slate-500"}`}>
-                        Cliente
-                      </span>
-                      <span className="text-sm font-black truncate block mt-1">
-                        {resumoStat.cliente}
-                      </span>
-                      <span className={`text-[9px] font-semibold block ${resumoCardFilter === "todos" ? "text-blue-200" : "text-slate-500"}`}>
-                        todas as frentes
-                      </span>
-                    </button>
-
-                    {/* 2. Card Horas Previstas */}
-                    <button
-                      type="button"
-                      onClick={() => setResumoCardFilter("previstas")}
-                      className={`p-3 rounded-lg border transition cursor-pointer active:scale-95 ${
-                        resumoCardFilter === "previstas"
-                          ? "bg-blue-900 text-white border-blue-950 shadow-md ring-2 ring-blue-300"
-                          : "bg-slate-50 hover:bg-blue-50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "previstas" ? "text-blue-200" : "text-slate-500"}`}>
-                        Horas Previstas
-                      </span>
-                      <span className={`text-sm font-black mt-1 block ${resumoCardFilter === "previstas" ? "text-white" : "text-[#15365C]"}`}>
-                        {resumoStat.horasPrevistas}h
-                      </span>
-                      <span className={`text-[9px] font-semibold block ${resumoCardFilter === "previstas" ? "text-blue-200" : "text-slate-500"}`}>
-                        escopo contratado
-                      </span>
-                    </button>
-
-                    {/* 3. Card Horas Gastas */}
-                    <button
-                      type="button"
-                      onClick={() => setResumoCardFilter("gastas")}
-                      className={`p-3 rounded-lg border transition cursor-pointer active:scale-95 ${
-                        resumoCardFilter === "gastas"
-                          ? "bg-emerald-700 text-white border-emerald-800 shadow-md ring-2 ring-emerald-300"
-                          : "bg-slate-50 hover:bg-emerald-50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "gastas" ? "text-emerald-100" : "text-slate-500"}`}>
-                        Horas Gastas
-                      </span>
-                      <span className={`text-sm font-black mt-1 block ${resumoCardFilter === "gastas" ? "text-white" : "text-emerald-700"}`}>
-                        {resumoStat.horasRealizadas}h
-                      </span>
-                      <span className={`text-[9px] font-semibold block ${resumoCardFilter === "gastas" ? "text-emerald-100" : "text-emerald-600"}`}>
-                        {Math.round(((resumoStat.horasRealizadas / (resumoStat.horasPrevistas || 1)) * 100) * 10) / 10}% do previsto
-                      </span>
-                    </button>
-
-                    {/* 4. Card Concluídas */}
-                    <button
-                      type="button"
-                      onClick={() => setResumoCardFilter("concluidas")}
-                      className={`p-3 rounded-lg border transition cursor-pointer active:scale-95 ${
-                        resumoCardFilter === "concluidas"
-                          ? "bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-300"
-                          : "bg-slate-50 hover:bg-emerald-50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "concluidas" ? "text-emerald-100" : "text-slate-500"}`}>
-                        Concluídas
-                      </span>
-                      <span className={`text-sm font-black mt-1 block ${resumoCardFilter === "concluidas" ? "text-white" : "text-emerald-700"}`}>
-                        {resumoStat.concluidas}
-                      </span>
-                      <span className={`text-[9px] font-semibold block ${resumoCardFilter === "concluidas" ? "text-emerald-100" : "text-slate-500"}`}>
-                        frentes 100%
-                      </span>
-                    </button>
-
-                    {/* 5. Card Em Andamento */}
-                    <button
-                      type="button"
-                      onClick={() => setResumoCardFilter("em_andamento")}
-                      className={`p-3 rounded-lg border transition cursor-pointer active:scale-95 ${
-                        resumoCardFilter === "em_andamento"
-                          ? "bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-300"
-                          : "bg-slate-50 hover:bg-amber-50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "em_andamento" ? "text-amber-100" : "text-slate-500"}`}>
-                        Em Andamento
-                      </span>
-                      <span className={`text-sm font-black mt-1 block ${resumoCardFilter === "em_andamento" ? "text-white" : "text-amber-600"}`}>
-                        {resumoStat.emAndamento}
-                      </span>
-                      <span className={`text-[9px] font-semibold block ${resumoCardFilter === "em_andamento" ? "text-amber-100" : "text-slate-500"}`}>
-                        em execução
-                      </span>
-                    </button>
-
-                    {/* 6. Card Frentes Futuras */}
-                    <button
-                      type="button"
-                      onClick={() => setResumoCardFilter("futuras")}
-                      className={`p-3 rounded-lg border transition cursor-pointer active:scale-95 ${
-                        resumoCardFilter === "futuras"
-                          ? "bg-slate-700 text-white border-slate-800 shadow-md ring-2 ring-slate-400"
-                          : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "futuras" ? "text-slate-200" : "text-slate-500"}`}>
-                        Frentes Futuras
-                      </span>
-                      <span className={`text-sm font-black mt-1 block ${resumoCardFilter === "futuras" ? "text-white" : "text-slate-700"}`}>
-                        {resumoStat.futuras}
-                      </span>
-                      <span className={`text-[9px] font-semibold block ${resumoCardFilter === "futuras" ? "text-slate-200" : "text-slate-500"}`}>
-                        a iniciar (0%)
-                      </span>
-                    </button>
-
-                    {/* 7. Card % Conclusão Real (Extremidade Direita) */}
-                    <button
-                      type="button"
-                      onClick={() => setResumoCardFilter("percentual")}
-                      className={`p-3 rounded-lg border transition cursor-pointer active:scale-95 ${
-                        resumoCardFilter === "percentual"
-                          ? "bg-[#E52329] text-white border-red-800 shadow-md ring-2 ring-red-300"
-                          : "bg-slate-50 hover:bg-red-50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "percentual" ? "text-red-100" : "text-slate-500"}`}>
-                        % Conclusão Real
-                      </span>
-                      <span className={`text-sm font-black mt-1 block ${resumoCardFilter === "percentual" ? "text-white" : "text-[#15365C]"}`}>
-                        {resumoStat.mediaPerc}%
-                      </span>
-                      <span className={`text-[9px] font-semibold block ${resumoCardFilter === "percentual" ? "text-red-100" : "text-blue-500"}`}>
-                        avanço da obra
-                      </span>
-                    </button>
-                  </div>
-                )}
+                <div className="text-[11px] text-slate-500 font-semibold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-teal-500 inline-block"></span>
+                  <span>
+                    Referência ativa: <strong>{dashboardMes === "todos" ? "Consolidado Geral (5 Meses)" : MESES_OPCOES.find(m => m.id === dashboardMes)?.nome}</strong>
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* SEÇÃO INFERIOR DINÂMICA BASEADA NO FILTRO */}
-            {raioXObra === "Todas" ? (
-              /* VISÃO TODAS AS OBRAS: RESUMO DE CADA OBRA */
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-[#15365C] px-5 py-3 text-white flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-amber-300" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider">
-                      Resumo Individual de Cada Obra ({obrasStats.length} Empreendimentos Cadastrados)
-                    </h3>
-                  </div>
-                  <span className="text-xs text-blue-200 font-semibold">
-                    Clique em qualquer obra para abrir seu detalhamento
+            {/* 2. RIBBON DE KPIs EXECUTIVOS (4 CARDS DE ALTO IMPACTO) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* KPI 1: Capacidade do Time */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-white to-blue-50/40 border border-slate-200 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Capacidade Técnica</span>
+                  <span className="p-1 rounded-md bg-blue-100 text-[#15365C]">
+                    <Users className="w-4 h-4" />
                   </span>
                 </div>
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {obrasStats.map((o) => {
-                    const fCount = atividades.filter(a => a.obraNome === o.nome && !a.isNA && a.percentual === 0).length;
-                    return (
-                      <div
+                <div className="text-2xl font-black text-[#15365C] tracking-tight">
+                  {balancoHorasMes.capacidadeTotalDisponivel}h
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span><strong>{balancoHorasMes.numTecnicos} colaboradores</strong></span>
+                  <span className="font-mono text-[11px]">176h/mês cada</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-teal-600 h-1.5 rounded-full w-full" />
+                </div>
+              </div>
+
+              {/* KPI 2: Demanda Requerida */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-white to-amber-50/40 border border-amber-200/90 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">Demanda Requerida</span>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase border ${
+                    balancoHorasMes.taxaOcupacao <= 80
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      : balancoHorasMes.taxaOcupacao <= 100
+                      ? "bg-blue-50 text-[#15365C] border-blue-200"
+                      : "bg-rose-50 text-rose-800 border-rose-200"
+                  }`}>
+                    {balancoHorasMes.taxaOcupacao}% Ocupação
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-amber-950 tracking-tight">
+                  {balancoHorasMes.horasDemandadasTotal}h
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Projetado em {obras.length} obras</span>
+                  <span className="font-bold text-amber-800">
+                    {balancoHorasMes.taxaOcupacao <= 80 ? "Disponível" : balancoHorasMes.taxaOcupacao <= 100 ? "Ideal" : "Sobrecarga"}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${
+                      balancoHorasMes.taxaOcupacao <= 80 ? "bg-emerald-500" : balancoHorasMes.taxaOcupacao <= 100 ? "bg-[#15365C]" : "bg-rose-600"
+                    }`}
+                    style={{ width: `${Math.min(100, balancoHorasMes.taxaOcupacao)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* KPI 3: Saldo / Balanço de Horas */}
+              <div className={`p-4 rounded-xl border shadow-2xs space-y-2 ${
+                balancoHorasMes.saldoHoras >= 0
+                  ? "bg-gradient-to-br from-white to-emerald-50/50 border-emerald-200/90"
+                  : "bg-gradient-to-br from-white to-rose-50/60 border-rose-200/90"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                    balancoHorasMes.saldoHoras >= 0 ? "text-emerald-800" : "text-rose-800"
+                  }`}>
+                    Balanço de Capacidade
+                  </span>
+                  <span className={`p-1 rounded-md ${
+                    balancoHorasMes.saldoHoras >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                  }`}>
+                    {balancoHorasMes.saldoHoras >= 0 ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                  </span>
+                </div>
+                <div className={`text-2xl font-black tracking-tight ${
+                  balancoHorasMes.saldoHoras >= 0 ? "text-emerald-800" : "text-rose-700"
+                }`}>
+                  {balancoHorasMes.saldoHoras >= 0 ? `+${balancoHorasMes.saldoHoras}h` : `${balancoHorasMes.saldoHoras}h`}
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className={balancoHorasMes.saldoHoras >= 0 ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                    {balancoHorasMes.saldoHoras >= 0 ? "Folga disponível" : "Gargalo / Sobrecarga"}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {balancoHorasMes.saldoHoras >= 0 ? "Sem hora extra" : "Requer remanejamento"}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-1.5 rounded-full ${balancoHorasMes.saldoHoras >= 0 ? "bg-emerald-600" : "bg-rose-600"}`}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </div>
+
+              {/* KPI 4: Execução & Conclusão Física */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-white to-slate-50 border border-slate-200 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Avanço Físico Real</span>
+                  <span className="p-1 rounded-md bg-slate-100 text-[#15365C]">
+                    <Clock className="w-4 h-4" />
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-[#15365C] tracking-tight">
+                  {resumoStat.mediaPerc}%
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span><strong>{balancoHorasMes.horasRealizadasNoMes}h</strong> apontadas</span>
+                  <span className="font-semibold text-emerald-700">
+                    {Math.round((balancoHorasMes.horasRealizadasNoMes / (balancoHorasMes.horasDemandadasTotal || 1)) * 100)}% executado
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-[#E52329] h-1.5 rounded-full transition-all"
+                    style={{ width: `${resumoStat.mediaPerc}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. VISÃO A: COCKPIT DE CAPACIDADE & DEMANDA CLT */}
+            {(dashboardViewTab === "cockpit" || dashboardViewTab === "completo") && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                  {/* Studio Visual: Balanço Proporcional do Mês (7 Colunas) */}
+                  <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-5 space-y-4 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                        <div>
+                          <span className="text-xs font-black text-[#15365C] uppercase tracking-wider block">
+                            Comparativo Direto de Horas — {dashboardMes === "todos" ? "Consolidado Geral" : MESES_OPCOES.find(m => m.id === dashboardMes)?.nome}
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            Capacidade Nominal CLT vs Carga de Trabalho Demandada
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] font-bold">
+                          <span className="px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                            Disp: {balancoHorasMes.capacidadeTotalDisponivel}h
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-blue-50 text-[#15365C] border border-blue-200">
+                            Nec: {balancoHorasMes.horasDemandadasTotal}h
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3 Barras Visuais Proporcionais */}
+                      <div className="space-y-3 pt-1">
+                        {/* Barra 1: Disponíveis */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-teal-900 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block"></span>
+                              Capacidade Disponível (Base Nominal 44h/sem)
+                            </span>
+                            <span className="font-mono font-bold text-teal-800 text-xs">
+                              {balancoHorasMes.capacidadeTotalDisponivel}h (100%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-lg h-6 p-0.5 border border-slate-200 flex items-center">
+                            <div
+                              className="h-full bg-teal-600 rounded-md shadow-2xs flex items-center justify-end px-2 text-[10px] font-black text-white"
+                              style={{ width: "100%" }}
+                            >
+                              {balancoHorasMes.capacidadeTotalDisponivel}h
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Barra 2: Necessárias */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-[#15365C] flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#15365C] inline-block"></span>
+                              Demanda Necessária (Todas as Obras)
+                            </span>
+                            <span className={`font-mono font-bold text-xs ${
+                              balancoHorasMes.horasDemandadasTotal > balancoHorasMes.capacidadeTotalDisponivel ? "text-rose-600" : "text-[#15365C]"
+                            }`}>
+                              {balancoHorasMes.horasDemandadasTotal}h ({balancoHorasMes.taxaOcupacao}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-lg h-6 p-0.5 border border-slate-200 flex items-center">
+                            <div
+                              className={`h-full rounded-md shadow-2xs flex items-center justify-end px-2 text-[10px] font-black text-white transition-all ${
+                                balancoHorasMes.horasDemandadasTotal > balancoHorasMes.capacidadeTotalDisponivel
+                                  ? "bg-rose-600"
+                                  : balancoHorasMes.taxaOcupacao > 85
+                                  ? "bg-amber-600"
+                                  : "bg-[#15365C]"
+                              }`}
+                              style={{
+                                width: `${Math.min(100, (balancoHorasMes.horasDemandadasTotal / (balancoHorasMes.capacidadeTotalDisponivel || 1)) * 100)}%`
+                              }}
+                            >
+                              {balancoHorasMes.horasDemandadasTotal}h
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Barra 3: Apontadas */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-blue-900 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+                              Horas Realizadas / Apontadas
+                            </span>
+                            <span className="font-mono font-bold text-blue-800 text-xs">
+                              {balancoHorasMes.horasRealizadasNoMes}h ({Math.round((balancoHorasMes.horasRealizadasNoMes / (balancoHorasMes.horasDemandadasTotal || 1)) * 100)}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-lg h-6 p-0.5 border border-slate-200 flex items-center">
+                            <div
+                              className="h-full bg-blue-500 rounded-md shadow-2xs flex items-center justify-end px-2 text-[10px] font-black text-white transition-all"
+                              style={{
+                                width: `${Math.min(100, (balancoHorasMes.horasRealizadasNoMes / (balancoHorasMes.capacidadeTotalDisponivel || 1)) * 100)}%`
+                              }}
+                            >
+                              {balancoHorasMes.horasRealizadasNoMes}h
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card de Diagnóstico Executivo */}
+                      <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${
+                        balancoHorasMes.saldoHoras >= 0
+                          ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+                          : "bg-rose-50/80 border-rose-200 text-rose-900"
+                      }`}>
+                        {balancoHorasMes.saldoHoras >= 0 ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                        )}
+                        <span className="leading-snug">
+                          {balancoHorasMes.saldoHoras >= 0
+                            ? `Saldo Favorável: O time de engenharia dispõe de ${balancoHorasMes.saldoHoras}h livres no mês para absorver novas atividades sem risco de horas extras.`
+                            : `Alerta de Gargalo: A demanda excede o teto regular da equipe em ${Math.abs(balancoHorasMes.saldoHoras)}h. Recomenda-se remanejamento de prazos ou reforço de alocação.`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Distribuição por Obra no Mês */}
+                    <div className="pt-3 border-t border-slate-100 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+                        <span className="uppercase text-[10px] tracking-wider">Carga Demandada por Empreendimento ({dashboardMes === "todos" ? "Geral" : MESES_OPCOES.find(m => m.id === dashboardMes)?.mesAbrev})</span>
+                        <span className="text-[10px] text-slate-400 font-normal">Clique para filtrar</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {obras.map(o => {
+                          const hObra = balancoHorasMes.horasDemandadasPorObra[o.nome] || 0;
+                          const percDoMes = balancoHorasMes.capacidadeTotalDisponivel > 0
+                            ? Math.round((hObra / balancoHorasMes.capacidadeTotalDisponivel) * 100)
+                            : 0;
+                          return (
+                            <button
+                              key={o.id}
+                              type="button"
+                              onClick={() => {
+                                setRaioXObra(o.nome);
+                                setDashboardViewTab("raiox");
+                              }}
+                              className="p-2 bg-slate-50 hover:bg-blue-50/50 rounded-lg border border-slate-200 text-left transition active:scale-95 space-y-1 cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-[#15365C] truncate">{o.nome}</span>
+                                <span className="font-mono font-black text-[11px] text-amber-900 bg-amber-50 px-1 rounded">
+                                  {hObra}h
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] text-slate-500">
+                                <span>{percDoMes}% da capacidade</span>
+                                <span className="text-blue-600 font-bold">&rarr;</span>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
+                                <div className="bg-[#15365C] h-1 rounded-full" style={{ width: `${Math.min(100, percDoMes)}%` }} />
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Linha do Tempo Comparativa 5 Meses (5 Colunas) */}
+                  <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-5 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <div>
+                          <span className="text-xs font-black text-[#15365C] uppercase tracking-wider block">
+                            Linha do Tempo (5 Meses)
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            Evolução comparativa Out/26 a Fev/27
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] font-bold">
+                          <span className="flex items-center gap-1 text-teal-700">
+                            <span className="w-2 h-2 rounded bg-teal-600 inline-block"></span> Disp (528h)
+                          </span>
+                          <span className="flex items-center gap-1 text-[#15365C]">
+                            <span className="w-2 h-2 rounded bg-[#15365C] inline-block"></span> Nec
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Colunas Pareadas Interativas */}
+                      <div className="grid grid-cols-5 gap-2 pt-1">
+                        {balancoHorasMes.comparativoMeses.map((m) => {
+                          const isCurrentSelected = dashboardMes === m.id;
+                          const isOverloaded = m.demanda > m.capacidade;
+                          const maxRef = Math.max(m.capacidade, m.demanda, 600);
+                          const alturaDisponivel = Math.round((m.capacidade / maxRef) * 110);
+                          const alturaDemanda = Math.round((m.demanda / maxRef) * 110);
+
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                setDashboardMes(m.id);
+                                setResumoPeriodoFilter(m.id);
+                              }}
+                              className={`p-2 rounded-xl border text-center transition cursor-pointer flex flex-col justify-between space-y-2 active:scale-95 ${
+                                isCurrentSelected
+                                  ? "bg-blue-50/70 border-[#15365C] shadow-xs ring-2 ring-[#15365C]/30"
+                                  : "bg-slate-50/60 hover:bg-slate-100/80 border-slate-200"
+                              }`}
+                            >
+                              <div className="pb-1 border-b border-slate-200/60">
+                                <span className={`text-[11px] font-black block ${isCurrentSelected ? "text-[#15365C]" : "text-slate-700"}`}>
+                                  {m.mesAbrev}
+                                </span>
+                              </div>
+
+                              {/* Colunas Verticais Pareadas */}
+                              <div className="h-28 flex items-end justify-center gap-1.5 pb-1 border-b border-slate-200/60">
+                                {/* Coluna Disp */}
+                                <div className="flex flex-col items-center">
+                                  <div
+                                    className="w-3.5 bg-teal-600 rounded-t shadow-2xs transition-all"
+                                    style={{ height: `${alturaDisponivel}px` }}
+                                    title={`Disponível: ${m.capacidade}h`}
+                                  />
+                                </div>
+                                {/* Coluna Demanda */}
+                                <div className="flex flex-col items-center">
+                                  <div
+                                    className={`w-3.5 rounded-t shadow-2xs transition-all ${isOverloaded ? "bg-rose-600" : "bg-[#15365C]"}`}
+                                    style={{ height: `${alturaDemanda}px` }}
+                                    title={`Demanda: ${m.demanda}h`}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Ocupação & Balanço */}
+                              <div className="space-y-0.5">
+                                <span className={`text-[10px] font-black block ${isOverloaded ? "text-rose-600" : "text-emerald-700"}`}>
+                                  {m.capacidade - m.demanda >= 0 ? `+${Math.round((m.capacidade - m.demanda))}h` : `${Math.round((m.capacidade - m.demanda))}h`}
+                                </span>
+                                <span className="text-[9px] text-slate-400 block font-semibold">
+                                  {m.ocupacao}%
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Alerta de Frentes Sem Responsável Vinculado */}
+                    {balancoHorasMes.tarefasPendentesAlocacao.length > 0 && (
+                      <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-1.5 mt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
+                            Alocação Técnica Pendente
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded bg-amber-200/80 text-amber-900 font-black text-[10px]">
+                            {balancoHorasMes.tarefasPendentesAlocacao.length} {balancoHorasMes.tarefasPendentesAlocacao.length === 1 ? "frente" : "frentes"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-amber-800 leading-tight">
+                          Há atividades cadastradas com responsável <strong>"(A Definir)"</strong> aguardando atribuição de engenheiro.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentTab("gestao_tarefas")}
+                          className="text-xs font-bold text-amber-900 hover:text-amber-950 underline cursor-pointer pt-0.5 block"
+                        >
+                          Abrir Gestão de Tarefas para Alocar &rarr;
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 4. VISÃO B: RAIO-X DAS OBRAS & FRENTES TÉCNICAS */}
+            {(dashboardViewTab === "raiox" || dashboardViewTab === "completo") && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden space-y-4 p-4 sm:p-5">
+                {/* Header do Módulo Raio-X */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 bg-[#15365C] text-white rounded-lg shadow-xs">
+                        <Building2 className="w-4 h-4 text-amber-300" />
+                      </span>
+                      <h3 className="text-base font-black text-[#15365C]">
+                        Raio-X de Empreendimentos & Controle Físico
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Acompanhamento individual por projeto, horas previstas x realizadas e status das atividades
+                    </p>
+                  </div>
+
+                  {/* Seletor Rápido de Obra em Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-500 mr-1">Obra:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRaioXObra("Todas");
+                        setResumoCardFilter("todos");
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer ${
+                        raioXObra === "Todas"
+                          ? "bg-[#15365C] text-white shadow-xs font-black"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      }`}
+                    >
+                      🌐 Todas as Obras ({obras.length})
+                    </button>
+                    {obras.map((o) => (
+                      <button
                         key={o.id}
+                        type="button"
                         onClick={() => {
                           setRaioXObra(o.nome);
                           setResumoCardFilter("todos");
                         }}
-                        className="p-4 border border-slate-200 rounded-xl hover:border-[#15365C] hover:shadow-md transition bg-slate-50/50 cursor-pointer space-y-3"
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer truncate max-w-[170px] ${
+                          raioXObra === o.nome
+                            ? "bg-[#15365C] text-white shadow-xs font-black"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                        }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-sm text-[#15365C] uppercase">{o.nome}</h4>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-[#15365C]">
-                            {o.cliente}
-                          </span>
-                        </div>
-
-                        {/* Barra de Progresso Real */}
-                        <div>
-                          <div className="flex justify-between text-xs font-bold mb-1">
-                            <span className="text-slate-600">Conclusão Real</span>
-                            <span className="text-[#15365C] font-black">{o.mediaPerc}%</span>
-                          </div>
-                          <div className="w-full bg-slate-200 rounded-full h-2">
-                            <div
-                              className="bg-[#E52329] h-2 rounded-full transition-all"
-                              style={{ width: `${o.mediaPerc}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Indicadores de Horas */}
-                        <div className="grid grid-cols-2 gap-2 text-center pt-2 border-t border-slate-200">
-                          <div className="bg-white p-2 rounded border border-slate-100">
-                            <span className="text-[10px] text-slate-500 font-bold block uppercase">Previsto</span>
-                            <span className="text-xs font-black text-[#15365C]">{o.horasPrevistas}h</span>
-                          </div>
-                          <div className="bg-white p-2 rounded border border-slate-100">
-                            <span className="text-[10px] text-slate-500 font-bold block uppercase">Gasto</span>
-                            <span className="text-xs font-black text-emerald-700">{o.horasRealizadas}h</span>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center text-[10px] font-semibold text-slate-600 pt-1">
-                          <span className="text-emerald-700 font-bold">{o.concluidas} conc.</span>
-                          <span className="text-amber-700 font-bold">{o.emAndamento} andam.</span>
-                          <span className="text-slate-500 font-bold">{fCount} futuras</span>
-                          <span className="text-blue-600 font-black">Abrir &rarr;</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              /* VISÃO OBRA INDIVIDUAL: DESCRITIVO DE ATIVIDADES */
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-[#15365C] px-5 py-3 text-white flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ListPlus className="w-4 h-4 text-amber-300" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider">
-                      Descritivo de Atividades — Obra: <span className="text-amber-300">{raioXObra}</span>
-                    </h3>
+                        {o.nome}
+                      </button>
+                    ))}
                   </div>
-                  <span className="text-xs text-blue-200 font-semibold">
-                    Filtro Ativo: {resumoCardFilter.toUpperCase()}
+                </div>
+
+                {/* Filtro Rápido de Período (Mês Vigente vs Ciclo Completo) */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-600 flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-[#15365C]" />
+                      Janela Temporal:
+                    </span>
+                    <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setResumoPeriodoFilter("todos")}
+                        className={`px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+                          resumoPeriodoFilter === "todos"
+                            ? "bg-[#15365C] text-white shadow-2xs font-black"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        📅 Todo o Ciclo da Obra
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResumoPeriodoFilter(dashboardMes === "todos" ? "2026-11" : dashboardMes)}
+                        className={`px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+                          resumoPeriodoFilter !== "todos"
+                            ? "bg-[#15365C] text-white shadow-2xs font-black"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        📌 Apenas Mês {dashboardMes === "todos" ? "Nov/26" : MESES_OPCOES.find(m => m.id === dashboardMes)?.mesAbrev}
+                      </button>
+                    </div>
+                  </div>
+
+                  <span className="text-[11px] text-slate-500 italic">
+                    {resumoPeriodoFilter === "todos"
+                      ? "* Computando escopo completo do início ao fim"
+                      : `* Filtrando frentes e apontamentos referentes a ${MESES_OPCOES.find(m => m.id === resumoPeriodoFilter)?.nome || resumoPeriodoFilter}`}
                   </span>
                 </div>
 
-                <div className="p-4 overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                        <th className="p-2.5">ID</th>
-                        <th className="p-2.5">Atividade Técnica</th>
-                        <th className="p-2.5">Fase</th>
-                        <th className="p-2.5">Líder</th>
-                        <th className="p-2.5 text-center">Prazo</th>
-                        <th className="p-2.5 text-center">Horas Prev.</th>
-                        <th className="p-2.5 text-center">Horas Gastas</th>
-                        <th className="p-2.5 text-center">% Real</th>
-                        <th className="p-2.5 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {atividades
-                        .filter(a => a.obraNome === raioXObra && !a.isNA)
-                        .filter(a => {
-                          if (resumoCardFilter === "concluidas") return a.percentual >= 100;
-                          if (resumoCardFilter === "em_andamento") return a.percentual > 0 && a.percentual < 100;
-                          if (resumoCardFilter === "futuras") return a.percentual === 0;
-                          if (resumoCardFilter === "gastas") {
-                            const h = bancoHoras
-                              .filter(b => b.obraNome === a.obraNome && b.atividadeNome === a.atividade)
-                              .reduce((acc, curr) => acc + curr.totalHoras, 0);
-                            return h > 0;
-                          }
-                          return true;
-                        })
-                        .sort((a, b) => {
-                          if (resumoCardFilter === "percentual") return b.percentual - a.percentual;
-                          return a.id - b.id;
-                        })
-                        .map(act => {
-                          const horasPrev = (act.dias || 14) * 10;
-                          const horasGastas = Math.round(
-                            bancoHoras
-                              .filter(b => b.obraNome === act.obraNome && b.atividadeNome === act.atividade)
-                              .reduce((acc, curr) => acc + curr.totalHoras, 0) * 10
-                          ) / 10;
+                {/* 7 Micro-Cards Interativos de Filtragem do Raio-X */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-center">
+                  {/* 1. Cliente / Escopo */}
+                  <button
+                    type="button"
+                    onClick={() => setResumoCardFilter("todos")}
+                    className={`p-3 rounded-xl border transition cursor-pointer active:scale-95 flex flex-col justify-between ${
+                      resumoCardFilter === "todos"
+                        ? "bg-[#15365C] text-white border-[#15365C] shadow-xs ring-2 ring-blue-300"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "todos" ? "text-blue-200" : "text-slate-500"}`}>
+                      Cliente / Escopo
+                    </span>
+                    <span className="text-xs sm:text-sm font-black truncate block my-1">
+                      {resumoStat.cliente}
+                    </span>
+                    <span className={`text-[10px] block ${resumoCardFilter === "todos" ? "text-blue-200" : "text-slate-500"}`}>
+                      {resumoStat.totalAtividades} frentes
+                    </span>
+                  </button>
 
-                          return (
-                            <tr key={act.id} className="hover:bg-slate-50">
-                              <td className="p-2.5 text-slate-400 font-mono">#{act.id}</td>
-                              <td className="p-2.5 font-bold text-[#15365C]">{act.atividade}</td>
-                              <td className="p-2.5">
-                                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                                  {act.fase}
-                                </span>
-                              </td>
-                              <td className="p-2.5 text-slate-700">{act.resp1}</td>
-                              <td className="p-2.5 text-center font-bold text-slate-600">{act.dias}d</td>
-                              <td className="p-2.5 text-center font-black text-[#15365C] bg-blue-50/50">{horasPrev}h</td>
-                              <td className="p-2.5 text-center font-black text-emerald-700 bg-emerald-50/50">{horasGastas}h</td>
-                              <td className="p-2.5 text-center font-bold">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <div className="w-12 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                                    <div
-                                      className={`h-1.5 ${act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-amber-500" : "bg-slate-300"}`}
-                                      style={{ width: `${act.percentual}%` }}
-                                    />
-                                  </div>
-                                  <span>{act.percentual}%</span>
-                                </div>
-                              </td>
-                              <td className="p-2.5 text-center">
-                                {act.percentual >= 100 ? (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                    Concluído
-                                  </span>
-                                ) : act.percentual > 0 ? (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                                    Em Andamento
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                                    Futura (A Iniciar)
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                  {/* 2. Horas Previstas */}
+                  <button
+                    type="button"
+                    onClick={() => setResumoCardFilter("previstas")}
+                    className={`p-3 rounded-xl border transition cursor-pointer active:scale-95 flex flex-col justify-between ${
+                      resumoCardFilter === "previstas"
+                        ? "bg-blue-900 text-white border-blue-950 shadow-xs ring-2 ring-blue-300"
+                        : "bg-slate-50 hover:bg-blue-50/50 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "previstas" ? "text-blue-200" : "text-slate-500"}`}>
+                      Horas Previstas
+                    </span>
+                    <span className={`text-base font-black my-1 block ${resumoCardFilter === "previstas" ? "text-white" : "text-[#15365C]"}`}>
+                      {resumoStat.horasPrevistas}h
+                    </span>
+                    <span className={`text-[10px] block ${resumoCardFilter === "previstas" ? "text-blue-200" : "text-slate-500"}`}>
+                      escopo planejado
+                    </span>
+                  </button>
+
+                  {/* 3. Horas Gastas */}
+                  <button
+                    type="button"
+                    onClick={() => setResumoCardFilter("gastas")}
+                    className={`p-3 rounded-xl border transition cursor-pointer active:scale-95 flex flex-col justify-between ${
+                      resumoCardFilter === "gastas"
+                        ? "bg-emerald-700 text-white border-emerald-800 shadow-xs ring-2 ring-emerald-300"
+                        : "bg-slate-50 hover:bg-emerald-50/50 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "gastas" ? "text-emerald-100" : "text-slate-500"}`}>
+                      Horas Gastas
+                    </span>
+                    <span className={`text-base font-black my-1 block ${resumoCardFilter === "gastas" ? "text-white" : "text-emerald-700"}`}>
+                      {resumoStat.horasRealizadas}h
+                    </span>
+                    <span className={`text-[10px] font-semibold block ${resumoCardFilter === "gastas" ? "text-emerald-100" : "text-emerald-700"}`}>
+                      {Math.round(((resumoStat.horasRealizadas / (resumoStat.horasPrevistas || 1)) * 100) * 10) / 10}% do previsto
+                    </span>
+                  </button>
+
+                  {/* 4. Concluídas */}
+                  <button
+                    type="button"
+                    onClick={() => setResumoCardFilter("concluidas")}
+                    className={`p-3 rounded-xl border transition cursor-pointer active:scale-95 flex flex-col justify-between ${
+                      resumoCardFilter === "concluidas"
+                        ? "bg-emerald-600 text-white border-emerald-700 shadow-xs ring-2 ring-emerald-300"
+                        : "bg-slate-50 hover:bg-emerald-50/50 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "concluidas" ? "text-emerald-100" : "text-slate-500"}`}>
+                      Concluídas (100%)
+                    </span>
+                    <span className={`text-base font-black my-1 block ${resumoCardFilter === "concluidas" ? "text-white" : "text-emerald-700"}`}>
+                      {resumoStat.concluidas}
+                    </span>
+                    <span className={`text-[10px] block ${resumoCardFilter === "concluidas" ? "text-emerald-100" : "text-slate-500"}`}>
+                      frentes finalizadas
+                    </span>
+                  </button>
+
+                  {/* 5. Em Andamento */}
+                  <button
+                    type="button"
+                    onClick={() => setResumoCardFilter("em_andamento")}
+                    className={`p-3 rounded-xl border transition cursor-pointer active:scale-95 flex flex-col justify-between ${
+                      resumoCardFilter === "em_andamento"
+                        ? "bg-amber-600 text-white border-amber-700 shadow-xs ring-2 ring-amber-300"
+                        : "bg-slate-50 hover:bg-amber-50/50 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "em_andamento" ? "text-amber-100" : "text-slate-500"}`}>
+                      Em Andamento
+                    </span>
+                    <span className={`text-base font-black my-1 block ${resumoCardFilter === "em_andamento" ? "text-white" : "text-amber-600"}`}>
+                      {resumoStat.emAndamento}
+                    </span>
+                    <span className={`text-[10px] block ${resumoCardFilter === "em_andamento" ? "text-amber-100" : "text-slate-500"}`}>
+                      em execução
+                    </span>
+                  </button>
+
+                  {/* 6. Futuras */}
+                  <button
+                    type="button"
+                    onClick={() => setResumoCardFilter("futuras")}
+                    className={`p-3 rounded-xl border transition cursor-pointer active:scale-95 flex flex-col justify-between ${
+                      resumoCardFilter === "futuras"
+                        ? "bg-slate-700 text-white border-slate-800 shadow-xs ring-2 ring-slate-400"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "futuras" ? "text-slate-200" : "text-slate-500"}`}>
+                      Frentes Futuras
+                    </span>
+                    <span className={`text-base font-black my-1 block ${resumoCardFilter === "futuras" ? "text-white" : "text-slate-700"}`}>
+                      {resumoStat.futuras}
+                    </span>
+                    <span className={`text-[10px] block ${resumoCardFilter === "futuras" ? "text-slate-200" : "text-slate-500"}`}>
+                      a iniciar (0%)
+                    </span>
+                  </button>
+
+                  {/* 7. % Conclusão Real */}
+                  <button
+                    type="button"
+                    onClick={() => setResumoCardFilter("percentual")}
+                    className={`p-3 rounded-xl border transition cursor-pointer active:scale-95 flex flex-col justify-between ${
+                      resumoCardFilter === "percentual"
+                        ? "bg-[#E52329] text-white border-red-800 shadow-xs ring-2 ring-red-300"
+                        : "bg-slate-50 hover:bg-red-50/50 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase block ${resumoCardFilter === "percentual" ? "text-red-100" : "text-slate-500"}`}>
+                      % Conclusão Real
+                    </span>
+                    <span className={`text-base font-black my-1 block ${resumoCardFilter === "percentual" ? "text-white" : "text-[#15365C]"}`}>
+                      {resumoStat.mediaPerc}%
+                    </span>
+                    <span className={`text-[10px] block ${resumoCardFilter === "percentual" ? "text-red-100" : "text-blue-500 font-semibold"}`}>
+                      avanço médio
+                    </span>
+                  </button>
                 </div>
+
+                {/* Exibição: Grid de Cards para "Todas as Obras" OU Tabela Detalhada para Obra Específica */}
+                {raioXObra === "Todas" ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-[#15365C] uppercase tracking-wider">
+                        Panorama Geral dos Empreendimentos ({obrasStats.length} Obras Cadastradas)
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Clique em uma obra para examinar seu cronograma analítico
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                      {obrasStats.map((o) => {
+                        const fCount = atividades.filter(a => a.obraNome === o.nome && !a.isNA && a.percentual === 0).length;
+                        return (
+                          <div
+                            key={o.id}
+                            onClick={() => {
+                              setRaioXObra(o.nome);
+                              setResumoCardFilter("todos");
+                            }}
+                            className="p-4 bg-slate-50/70 hover:bg-white border border-slate-200 hover:border-[#15365C] rounded-2xl hover:shadow-md transition cursor-pointer space-y-3 active:scale-98"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h4 className="font-black text-sm text-[#15365C] uppercase">{o.nome}</h4>
+                                <span className="text-[11px] text-slate-500 font-semibold">{o.cliente}</span>
+                              </div>
+                              <span className="text-xs font-black px-2 py-0.5 rounded-full bg-blue-100 text-[#15365C] flex-shrink-0">
+                                {o.mediaPerc}%
+                              </span>
+                            </div>
+
+                            {/* Barra de Progresso Real */}
+                            <div className="space-y-1">
+                              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-[#E52329] h-2 rounded-full transition-all"
+                                  style={{ width: `${o.mediaPerc}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Horas Previstas vs Gastas */}
+                            <div className="grid grid-cols-2 gap-2 text-center pt-1">
+                              <div className="bg-white p-2 rounded-lg border border-slate-200/80">
+                                <span className="text-[10px] text-slate-500 font-bold block uppercase">Previsto</span>
+                                <span className="text-xs font-black text-[#15365C]">{o.horasPrevistas}h</span>
+                              </div>
+                              <div className="bg-white p-2 rounded-lg border border-slate-200/80">
+                                <span className="text-[10px] text-slate-500 font-bold block uppercase">Realizado</span>
+                                <span className="text-xs font-black text-emerald-700">{o.horasRealizadas}h</span>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[10px] font-bold text-slate-600 pt-1 border-t border-slate-200/60">
+                              <span className="text-emerald-700">{o.concluidas} conc.</span>
+                              <span className="text-amber-700">{o.emAndamento} andam.</span>
+                              <span className="text-slate-500">{fCount} futuras</span>
+                              <span className="text-blue-600 font-black hover:underline">Ver Frentes &rarr;</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* Tabela Detalhada da Obra Selecionada */
+                  <div className="space-y-3 pt-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-[#15365C] uppercase tracking-wider">
+                          Atividades Técnicas: <span className="text-blue-600">{raioXObra}</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border">
+                          Filtro: {resumoCardFilter.toUpperCase()}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRaioXObra("Todas");
+                          setResumoCardFilter("todos");
+                        }}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      >
+                        &larr; Voltar para Todas as Obras
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                            <th className="p-2.5">ID</th>
+                            <th className="p-2.5">Atividade Técnica</th>
+                            <th className="p-2.5">Fase</th>
+                            <th className="p-2.5">Responsável</th>
+                            <th className="p-2.5 text-center">Prazo</th>
+                            <th className="p-2.5 text-center">Horas Prev.</th>
+                            <th className="p-2.5 text-center">Horas Gastas</th>
+                            <th className="p-2.5 text-center">% Real</th>
+                            <th className="p-2.5 text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {atividades
+                            .filter(a => a.obraNome === raioXObra && !a.isNA)
+                            .filter(a => {
+                              if (resumoPeriodoFilter !== "todos") {
+                                return getTaskHoursInMonth(a, resumoPeriodoFilter) > 0;
+                              }
+                              return true;
+                            })
+                            .filter(a => {
+                              if (resumoCardFilter === "concluidas") return a.percentual >= 100;
+                              if (resumoCardFilter === "em_andamento") return a.percentual > 0 && a.percentual < 100;
+                              if (resumoCardFilter === "futuras") return a.percentual === 0;
+                              if (resumoCardFilter === "gastas") {
+                                const h = bancoHoras
+                                  .filter(b => b.obraNome === a.obraNome && b.atividadeNome === a.atividade && (resumoPeriodoFilter === "todos" ? true : b.data && b.data.startsWith(resumoPeriodoFilter)))
+                                  .reduce((acc, curr) => acc + curr.totalHoras, 0);
+                                return h > 0;
+                              }
+                              return true;
+                            })
+                            .sort((a, b) => {
+                              if (resumoCardFilter === "percentual") return b.percentual - a.percentual;
+                              return a.id - b.id;
+                            })
+                            .map(act => {
+                              const horasPrev = resumoPeriodoFilter !== "todos"
+                                ? getTaskHoursInMonth(act, resumoPeriodoFilter)
+                                : ((act.dias || 14) * 10);
+                              const horasGastas = Math.round(
+                                bancoHoras
+                                  .filter(b => b.obraNome === act.obraNome && b.atividadeNome === act.atividade && (resumoPeriodoFilter === "todos" ? true : b.data && b.data.startsWith(resumoPeriodoFilter)))
+                                  .reduce((acc, curr) => acc + curr.totalHoras, 0) * 10
+                              ) / 10;
+                              const isUnassigned = !act.resp1 || act.resp1 === "A Definir" || act.resp1 === "(A Definir)";
+
+                              return (
+                                <tr key={act.id} className="hover:bg-blue-50/30 transition">
+                                  <td className="p-2.5 text-slate-400 font-mono">#{act.id}</td>
+                                  <td className="p-2.5 font-bold text-[#15365C]">{act.atividade}</td>
+                                  <td className="p-2.5">
+                                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                                      {act.fase}
+                                    </span>
+                                  </td>
+                                  <td className="p-2.5">
+                                    {isUnassigned ? (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3 text-amber-700" />
+                                        (A Definir)
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-700 font-medium">{act.resp1}</span>
+                                    )}
+                                  </td>
+                                  <td className="p-2.5 text-center font-bold text-slate-600">{act.dias}d</td>
+                                  <td className="p-2.5 text-center font-black text-[#15365C] bg-blue-50/40">{horasPrev}h</td>
+                                  <td className="p-2.5 text-center font-black text-emerald-700 bg-emerald-50/40">{horasGastas}h</td>
+                                  <td className="p-2.5 text-center font-bold">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <div className="w-12 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                        <div
+                                          className={`h-1.5 ${act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-amber-500" : "bg-slate-300"}`}
+                                          style={{ width: `${act.percentual}%` }}
+                                        />
+                                      </div>
+                                      <span>{act.percentual}%</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2.5 text-center">
+                                    {act.percentual >= 100 ? (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                                        Concluído
+                                      </span>
+                                    ) : act.percentual > 0 ? (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">
+                                        Em Andamento
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-600">
+                                        Futura (0%)
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2596,9 +3604,20 @@ export default function App() {
 
             {/* Grid dos Cards de Tarefas do Colaborador com detalhamento de horas em conjunto */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {minhasAtividades
-                .filter(a => minhasAtividadesObraFilter === "Todas" || a.obraNome === minhasAtividadesObraFilter)
-                .map((act) => {
+              {minhasAtividades.filter(a => minhasAtividadesObraFilter === "Todas" || a.obraNome === minhasAtividadesObraFilter).length === 0 ? (
+                <div className="col-span-full p-12 bg-white rounded-xl border border-slate-200 text-center space-y-3">
+                  <CheckCircle2 className="w-12 h-12 text-slate-300 mx-auto" />
+                  <h3 className="text-base font-bold text-slate-700">Nenhuma atividade encontrada</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    {minhasAtividadesObraFilter !== "Todas"
+                      ? `Você não possui atividades alocadas especificamente na obra "${minhasAtividadesObraFilter}".`
+                      : "No momento você não possui frentes de trabalho vinculadas diretamente ao seu perfil."}
+                  </p>
+                </div>
+              ) : (
+                minhasAtividades
+                  .filter(a => minhasAtividadesObraFilter === "Todas" || a.obraNome === minhasAtividadesObraFilter)
+                  .map((act) => {
                   const horasPrevistas = (act.dias || 14) * 10;
                   
                   // Apontamentos específicos desta atividade (somam todos os colaboradores alocados)
@@ -2615,6 +3634,19 @@ export default function App() {
                   apontamentosFrente.forEach(ap => {
                     horasPorColaborador[ap.colaboradorNome] = (horasPorColaborador[ap.colaboradorNome] || 0) + ap.totalHoras;
                   });
+
+                  // Percentual proporcional de horas executadas
+                  const percHoras = horasPrevistas > 0 ? Math.round((horasGastasTotal / horasPrevistas) * 100) : 0;
+
+                  // Percentual efetivo para exibição gráfica: se há horas apontadas e percentual físico ainda em 0%, inicia com no mínimo 15% ou percHoras
+                  const percEfetivo = act.percentual > 0
+                    ? act.percentual
+                    : horasGastasTotal > 0
+                    ? Math.max(15, Math.min(95, percHoras))
+                    : 0;
+
+                  const isConcluida = percEfetivo >= 100 || (horasPrevistas > 0 && horasGastasTotal >= horasPrevistas);
+                  const isEmAndamento = !isConcluida && (percEfetivo > 0 || horasGastasTotal > 0);
 
                   return (
                     <div
@@ -2634,15 +3666,16 @@ export default function App() {
                           </span>
                         </div>
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            act.percentual >= 100
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                            isConcluida
                               ? "bg-emerald-100 text-emerald-800"
-                              : act.percentual > 0
+                              : isEmAndamento
                               ? "bg-amber-100 text-amber-800"
                               : "bg-slate-100 text-slate-600"
                           }`}
                         >
-                          {act.percentual >= 100 ? "Concluído" : act.percentual > 0 ? "Em Andamento" : "Não Iniciado"}
+                          {isEmAndamento && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />}
+                          <span>{isConcluida ? "Concluído" : isEmAndamento ? "Em Andamento" : "Não Iniciado"}</span>
                         </span>
                       </div>
 
@@ -2694,35 +3727,61 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Barra de Progresso Físico */}
-                      <div>
-                        <div className="flex justify-between text-xs font-bold mb-1">
-                          <span className="text-slate-600">Progresso Físico</span>
-                          <span className="text-[#15365C]">{act.percentual}%</span>
+                      {/* Gráfico 1: Barra de Carga Horária Executada (Atualiza imediatamente ao apontar horas) */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-slate-600 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-blue-600" />
+                            Carga Horária Apontada
+                          </span>
+                          <span className="font-mono font-bold text-[#15365C]">
+                            {horasGastasTotal}h de {horasPrevistas}h ({percHoras}%)
+                          </span>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                           <div
                             className={`h-2 rounded-full transition-all ${
-                              act.percentual >= 100 ? "bg-emerald-600" : "bg-[#E52329]"
+                              percHoras >= 100 ? "bg-emerald-600" : "bg-blue-600"
                             }`}
-                            style={{ width: `${act.percentual}%` }}
+                            style={{ width: `${Math.min(100, Math.max(horasGastasTotal > 0 ? 3 : 0, percHoras))}%` }}
                           />
                         </div>
                       </div>
 
-                      {/* Botões Rápidos de Percentual com Rolagem Horizontal (Desativados em modo Visualizador) */}
-                      {!isViewer && (
-                        <div className="space-y-2 pt-2 border-t border-slate-100">
+                      {/* Gráfico 2: Barra de Progresso Físico */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold mb-1">
+                          <span className="text-slate-600">Progresso Físico da Frente</span>
+                          <span className="text-[#15365C] font-black">{percEfetivo}%</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              percEfetivo >= 100 ? "bg-emerald-600" : "bg-[#E52329]"
+                            }`}
+                            style={{ width: `${percEfetivo}%` }}
+                          />
+                        </div>
+                        {!isCoordinator && (
+                          <span className="text-[10px] text-slate-400 mt-0.5 block italic">
+                            * Avanço físico validado pela Coordenação de Engenharia.
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Ajuste de Percentual (Restrito exclusivamente a Coordenadores) */}
+                      {isCoordinator && (
+                        <div className="space-y-1.5 pt-2 border-t border-slate-100">
                           <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase mr-1 flex-shrink-0">
-                              Ajuste Rápido:
+                            <span className="text-[11px] font-bold text-amber-800 uppercase mr-1 flex-shrink-0">
+                              Ajuste Coord:
                             </span>
                             {[0, 25, 50, 75, 100].map((val) => (
                               <button
                                 key={val}
                                 type="button"
                                 onClick={() => handleUpdateProgress(act.id, val)}
-                                className={`px-3 py-1 rounded text-xs font-bold transition flex-shrink-0 ${
+                                className={`px-2.5 py-1 rounded text-xs font-bold transition flex-shrink-0 cursor-pointer ${
                                   act.percentual === val
                                     ? "bg-[#15365C] text-white shadow"
                                     : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -2732,29 +3791,30 @@ export default function App() {
                               </button>
                             ))}
                           </div>
+                        </div>
+                      )}
 
-                          {/* Ações: Apontar Horas */}
-                          <div className="flex items-center justify-between gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveTaskForTime(act);
-                                setIsTimeModalOpen(true);
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition active:scale-95"
-                            >
-                              <Clock className="w-3.5 h-3.5 text-amber-700" />
-                              <span>Apontar Horas</span>
-                            </button>
-                            <span className="text-[10px] text-slate-400 italic">
-                              Atualizado: {act.lastUpdated || "Recente"}
-                            </span>
-                          </div>
+                      {/* Ações Operacionais: Apontamento de Horas (Liberado para Colaboradores e Coordenadores) */}
+                      {!isViewer && (
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenTimeModalForTask(act)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer shadow-xs"
+                            title="Apontar horas de hoje ou de dias anteriores nesta atividade"
+                          >
+                            <Clock className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Apontar Horas</span>
+                          </button>
+                          <span className="text-[10px] text-slate-400 italic">
+                            Atualizado: {act.lastUpdated || "Recente"}
+                          </span>
                         </div>
                       )}
                     </div>
                   );
-                })}
+                })
+              )}
             </div>
           </div>
         )}
@@ -2772,105 +3832,231 @@ export default function App() {
                     Cadastro & Gestão Geral de Obras
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Cadastre novos contratos ou edite os empreendimentos ativos da Climapress.
+                    Cadastre novos contratos, edite empreendimentos ativos ou restaure obras excluídas nos últimos 30 dias.
                   </p>
                 </div>
-                {isCoordinator && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingObra({ id: 0, nome: "", cliente: "", status: "Ativa" });
-                      setObraModalMode("create");
-                      setIsObraModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#E52329] hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow transition active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Cadastrar Nova Obra</span>
-                  </button>
-                )}
-                {isViewer && (
-                  <span className="px-3 py-1 rounded bg-slate-100 text-slate-600 text-xs font-bold">
-                    Visualização Executiva (Edição Restrita à Coordenação)
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Grid de Obras Cadastradas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {obrasStats.map((o) => (
-                <div
-                  key={o.id}
-                  className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 hover:border-slate-300 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                      {o.status}
-                    </span>
-                    {isCoordinator && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingObra(o);
-                            setObraModalMode("edit");
-                            setIsObraModalOpen(true);
-                          }}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Editar Dados da Obra"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setObraToDelete(o);
-                            setDeleteObraPassword("");
-                            setDeleteObraError("");
-                            setIsDeleteObraModalOpen(true);
-                          }}
-                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"
-                          title="Excluir Obra e todo o seu escopo com validação de senha"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Seletor de Visão: Ativas x Lixeira (Período de 30 dias) */}
+                  <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setObrasViewTab("ativas")}
+                      className={`px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 ${
+                        obrasViewTab === "ativas"
+                          ? "bg-white text-[#15365C] shadow-xs font-black"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Obras Ativas ({obras.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setObrasViewTab("lixeira")}
+                      className={`px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 ${
+                        obrasViewTab === "lixeira"
+                          ? "bg-white text-rose-700 shadow-xs font-black"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                      title="Obras excluídas que podem ser restauradas dentro do período de 30 dias"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Lixeira / Quarentena ({obrasExcluidas.length})</span>
+                      {obrasExcluidas.length > 0 && (
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                      )}
+                    </button>
                   </div>
 
-                  <div>
-                    <h3 className="font-black text-base text-[#15365C] uppercase">{o.nome}</h3>
-                    <p className="text-xs text-slate-500 font-semibold">Cliente: {o.cliente}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Frentes Ativas</span>
-                      <span className="text-sm font-black text-[#15365C]">{o.totalActs}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Conclusão Real</span>
-                      <span className="text-sm font-black text-[#E52329]">{o.mediaPerc}%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 text-slate-600">
-                    <span>Horas: <strong>{o.horasRealizadas}h</strong> / {o.horasPrevistas}h</span>
+                  {isCoordinator && obrasViewTab === "ativas" && (
                     <button
                       type="button"
                       onClick={() => {
-                        setTaskManagerObra(o.nome);
-                        setCurrentTab("gestao_tarefas");
+                        setEditingObra({ id: 0, nome: "", cliente: "", status: "Ativa" });
+                        setObraModalMode("create");
+                        setIsObraModalOpen(true);
                       }}
-                      className="text-blue-600 font-bold hover:underline"
+                      className="flex items-center gap-2 px-4 py-2 bg-[#E52329] hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow transition active:scale-95"
                     >
-                      Gerenciar Tarefas &rarr;
+                      <Plus className="w-4 h-4" />
+                      <span>Cadastrar Nova Obra</span>
                     </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* CONTEÚDO DA ABA SELECIONADA: OBRAS ATIVAS OU LIXEIRA (30 DIAS) */}
+            {obrasViewTab === "ativas" ? (
+              /* Grid de Obras Ativas */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {obrasStats.map((o) => (
+                  <div
+                    key={o.id}
+                    className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 hover:border-slate-300 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                        {o.status}
+                      </span>
+                      {isCoordinator && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingObra(o);
+                              setObraModalMode("edit");
+                              setIsObraModalOpen(true);
+                            }}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Editar Dados da Obra"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setObraToDelete(o);
+                              setDeleteObraPassword("");
+                              setDeleteObraError("");
+                              setIsDeleteObraModalOpen(true);
+                            }}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"
+                            title="Mover Obra para a Lixeira (com 30 dias de recuperação)"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="font-black text-base text-[#15365C] uppercase">{o.nome}</h3>
+                      <p className="text-xs text-slate-500 font-semibold">Cliente: {o.cliente}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Frentes Ativas</span>
+                        <span className="text-sm font-black text-[#15365C]">{o.totalActs}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Conclusão Real</span>
+                        <span className="text-sm font-black text-[#E52329]">{o.mediaPerc}%</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 text-slate-600">
+                      <span>Horas: <strong>{o.horasRealizadas}h</strong> / {o.horasPrevistas}h</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTaskManagerObra(o.nome);
+                          setCurrentTab("gestao_tarefas");
+                        }}
+                        className="text-blue-600 font-bold hover:underline"
+                      >
+                        Gerenciar Tarefas &rarr;
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* LIXEIRA / QUARENTENA DE OBRAS EXCLUÍDAS (PERÍODO DE 30 DIAS PARA CANCELAR EXCLUSÃO) */
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-xs text-amber-900 leading-relaxed">
+                    <strong className="block font-black text-amber-950">
+                      Política de Retenção e Cancelamento de Exclusão (30 Dias)
+                    </strong>
+                    <p>
+                      Obras excluídas permanecem preservadas nesta área durante <strong>30 dias corridos</strong> a partir da data de exclusão. Durante esse prazo, todo o escopo, tarefas e apontamentos podem ser <strong>restaurados instantaneamente com um clique</strong>.
+                    </p>
+                    <p className="text-slate-600 font-semibold text-[11px]">
+                      * Dica de Engenharia: Para obras concluídas ou pausadas, a alternativa recomendada é mantê-las como "Arquivadas" para preservar o histórico ISO sem excluí-las.
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {obrasExcluidas.length === 0 ? (
+                  <div className="p-12 text-center bg-white rounded-xl border border-slate-200 space-y-2">
+                    <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                    <h3 className="font-bold text-sm text-slate-700">A lixeira está vazia</h3>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Nenhuma obra foi excluída nos últimos 30 dias. Quando uma obra for excluída, ela aparecerá aqui para possibilitar o cancelamento da exclusão.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {obrasExcluidas.map((record) => {
+                      const msElapsed = Date.now() - new Date(record.deletedAt).getTime();
+                      const diasRestantes = Math.max(0, 30 - Math.floor(msElapsed / (1000 * 60 * 60 * 24)));
+                      const isExpired = diasRestantes <= 0;
+
+                      return (
+                        <div
+                          key={record.id}
+                          className="bg-white rounded-xl shadow-sm border-2 border-dashed border-rose-200 p-5 space-y-4 hover:border-rose-400 transition"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              isExpired ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-900 border border-amber-300"
+                            }`}>
+                              {isExpired ? "Exclusão Expirada" : `🕒 ${diasRestantes} dias para expirar`}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Excluída em: {new Date(record.deletedAt).toLocaleDateString("pt-BR")}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h3 className="font-black text-base text-[#15365C] uppercase">{record.obra.nome}</h3>
+                            <p className="text-xs text-slate-500 font-semibold">Cliente: {record.obra.cliente}</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">Excluída por: {record.deletedBy}</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-center bg-rose-50/60 p-2.5 rounded-lg border border-rose-100">
+                            <div>
+                              <span className="text-[10px] text-slate-500 font-bold uppercase block">Frentes Salvas</span>
+                              <span className="text-sm font-black text-[#15365C]">{record.atividades?.length || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-500 font-bold uppercase block">Apontamentos Salvos</span>
+                              <span className="text-sm font-black text-amber-700">{record.bancoHoras?.length || 0}</span>
+                            </div>
+                          </div>
+
+                          {isCoordinator && (
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreObra(record)}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
+                                title="Cancelar exclusão e restaurar obra com todas as atividades e apontamentos"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                                <span>Restaurar Obra (Cancelar Exclusão)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePurgeObra(record.id)}
+                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 transition"
+                                title="Excluir Definitivamente sem aguardar os 30 dias"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Registro de Auditoria de Exclusões */}
             {auditLogs.length > 0 && (
@@ -2942,7 +4128,7 @@ export default function App() {
                           atividade: "",
                           fase: "Projetos",
                           dias: 14,
-                          resp1: currentUser?.nome || INITIAL_EQUIPE[0].nome,
+                          resp1: "A Definir",
                           resp2: "",
                           resp3: "",
                           percentual: 0,
@@ -2984,9 +4170,17 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {atividades
-                      .filter(a => a.obraNome === taskManagerObra)
-                      .map((act) => (
+                    {atividades.filter(a => a.obraNome === taskManagerObra).length === 0 ? (
+                      <tr>
+                        <td colSpan={isCoordinator ? 12 : 11} className="p-8 text-center text-slate-400">
+                          Nenhuma atividade técnica cadastrada nesta obra ainda.
+                          {isCoordinator && ' Clique em "Incluir Tarefa Nesta Obra" acima para iniciar o escopo.'}
+                        </td>
+                      </tr>
+                    ) : (
+                      atividades
+                        .filter(a => a.obraNome === taskManagerObra)
+                        .map((act) => (
                         <tr key={act.id} className="hover:bg-slate-50">
                           <td className="p-2.5 font-mono text-slate-400">#{act.id}</td>
                           <td className="p-2.5 font-bold text-[#15365C]">{act.atividade}</td>
@@ -2995,7 +4189,16 @@ export default function App() {
                               {act.fase}
                             </span>
                           </td>
-                          <td className="p-2.5 font-semibold text-slate-700">{act.resp1}</td>
+                          <td className="p-2.5 font-semibold text-slate-700">
+                            {act.resp1 === "A Definir" || !act.resp1 ? (
+                              <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] inline-flex items-center gap-1 shadow-2xs">
+                                <AlertCircle className="w-3 h-3 text-amber-700 inline flex-shrink-0" />
+                                A Definir
+                              </span>
+                            ) : (
+                              act.resp1
+                            )}
+                          </td>
                           <td className="p-2.5 text-slate-500">{act.resp2 || "—"}</td>
                           <td className="p-2.5 text-slate-500">{act.resp3 || "—"}</td>
                           <td className="p-2.5 text-center font-bold text-slate-700">{act.dias}d</td>
@@ -3032,7 +4235,8 @@ export default function App() {
                             </td>
                           )}
                         </tr>
-                      ))}
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -3041,18 +4245,33 @@ export default function App() {
         )}
 
         {/* ========================================================= */}
-        {/* ABA: APONTAMENTO DE HORAS (BANCO DE HORAS)                */}
+        {/* ABA: APONTAMENTO DE HORAS (GESTOR / COORDENADOR OU VISUALIZADOR) */}
         {/* ========================================================= */}
-        {currentTab === "horas" && (
+        {currentTab === "horas" && (isCoordinator || isViewer) && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3">
-              <h2 className="text-lg font-black text-[#15365C] flex items-center gap-2">
-                <Clock className="w-5 h-5 text-amber-600" />
-                Banco de Horas & Apontamentos de Campo
-              </h2>
-              <p className="text-xs text-slate-500">
-                Histórico consolidado de horas executadas nas frentes de engenharia e instalações.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-black text-[#15365C] flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-amber-600" />
+                    Banco de Horas & Apontamentos de Campo
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Histórico consolidado de horas executadas. Lance horas de hoje ou retroativas de qualquer dia anterior.
+                  </p>
+                </div>
+                {!isViewer && (
+                  <button
+                    type="button"
+                    onClick={handleOpenDirectTimeModal}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#E52329] hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow transition active:scale-95 cursor-pointer"
+                    title="Lançar horas em qualquer obra e atividade (hoje ou dias anteriores)"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Novo Apontamento de Horas</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -3068,29 +4287,51 @@ export default function App() {
                       <th className="p-2.5 text-center">Total Horas</th>
                       <th className="p-2.5">Descrição do Trabalho Realizado</th>
                       <th className="p-2.5 text-center">Status</th>
+                      {isCoordinator && <th className="p-2.5 text-center">Ações</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {bancoHoras.map(b => (
-                      <tr key={b.id} className="hover:bg-slate-50">
-                        <td className="p-2.5 font-mono text-slate-600">{b.data}</td>
-                        <td className="p-2.5 font-bold text-slate-700">{b.colaboradorNome}</td>
-                        <td className="p-2.5 font-semibold text-[#15365C]">{b.obraNome}</td>
-                        <td className="p-2.5 text-slate-700">{b.atividadeNome}</td>
-                        <td className="p-2.5 text-center font-mono text-slate-500">
-                          {b.horaInicio} às {b.horaFim}
-                        </td>
-                        <td className="p-2.5 text-center font-black text-emerald-700 bg-emerald-50/40">
-                          {b.totalHoras}h
-                        </td>
-                        <td className="p-2.5 text-slate-600 max-w-xs truncate">{b.descricao}</td>
-                        <td className="p-2.5 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                            {b.status}
-                          </span>
+                    {bancoHoras.length === 0 ? (
+                      <tr>
+                        <td colSpan={isCoordinator ? 9 : 8} className="p-8 text-center text-slate-400">
+                          Nenhum apontamento de horas registrado ainda.
+                          {!isViewer && ' Clique em "Novo Apontamento de Horas" acima para realizar um lançamento.'}
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      bancoHoras.map(b => (
+                        <tr key={b.id} className="hover:bg-slate-50">
+                          <td className="p-2.5 font-mono text-slate-600">{b.data}</td>
+                          <td className="p-2.5 font-bold text-slate-700">{b.colaboradorNome}</td>
+                          <td className="p-2.5 font-semibold text-[#15365C]">{b.obraNome}</td>
+                          <td className="p-2.5 text-slate-700">{b.atividadeNome}</td>
+                          <td className="p-2.5 text-center font-mono text-slate-500">
+                            {b.horaInicio} às {b.horaFim}
+                          </td>
+                          <td className="p-2.5 text-center font-black text-emerald-700 bg-emerald-50/40">
+                            {b.totalHoras}h
+                          </td>
+                          <td className="p-2.5 text-slate-600 max-w-xs truncate">{b.descricao}</td>
+                          <td className="p-2.5 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              {b.status}
+                            </span>
+                          </td>
+                          {isCoordinator && (
+                            <td className="p-2.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTimeEntry(b.id)}
+                                className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+                                title="Estornar / Excluir este apontamento de horas"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -3150,19 +4391,55 @@ export default function App() {
               </div>
             </div>
 
+            {/* ITEM D: BANNER EXECUTIVO DE CAPACIDADE POR PROFISSIONAL */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-[#15365C] text-white rounded-lg shadow-2xs">
+                  <Users className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <span className="font-black text-[#15365C] uppercase text-xs block">
+                    Regra de Jornada Técnica: 8h Diárias • 44h Semanais (176h/mês por profissional)
+                  </span>
+                  <p className="text-slate-500 text-[11px]">
+                    Capacidade nominal de execução sem considerar horas extras, válida para todos os <strong>Coordenadores</strong> e <strong>Colaboradores</strong> operacionais de Engenharia.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-700">
+                  Carga por Engenheiro: <strong className="text-teal-700">176h/mês</strong>
+                </span>
+                <span className="px-3 py-1 bg-[#15365C] text-white rounded-lg font-mono font-black">
+                  Capacidade Total do Time: {equipeTecnica.length * 176}h/mês
+                </span>
+              </div>
+            </div>
+
             {/* Grid de Cards dos Membros da Equipe */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {equipe.map(colab => {
+                const isOperational = colab.role === "Coordenador" || colab.role === "Colaborador";
                 const tarefasColab = atividades.filter(
                   a => a.resp1 === colab.nome || a.resp2 === colab.nome || a.resp3 === colab.nome
                 );
                 const obrasColab = Array.from(new Set(tarefasColab.map(a => a.obraNome)));
                 const totalHorasPrevistas = tarefasColab.reduce((acc, a) => acc + ((a.dias || 14) * 10), 0);
 
+                // Cálculo de capacidade do colaborador no mês selecionado
+                const horasMensaisDisponiveis = isOperational ? 176 : 0;
+                const horasDemandadasColabMes = Math.round(
+                  tarefasColab.reduce((acc, a) => acc + getTaskHoursInMonth(a, dashboardMes), 0) * 10
+                ) / 10;
+                const saldoHorasColab = Math.round((horasMensaisDisponiveis - horasDemandadasColabMes) * 10) / 10;
+                const percOcupacaoColab = horasMensaisDisponiveis > 0 
+                  ? Math.round((horasDemandadasColabMes / horasMensaisDisponiveis) * 100) 
+                  : 0;
+
                 return (
                   <div
                     key={colab.id}
-                    className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3 hover:border-slate-300 transition"
+                    className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3.5 hover:border-slate-300 transition"
                   >
                     <div className="flex items-center justify-between">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
@@ -3214,19 +4491,80 @@ export default function App() {
                       <p className="text-[11px] text-slate-500 font-mono mt-0.5">{colab.fone}</p>
                     </div>
 
+                    {/* Bloco de Capacidade de Execução Individual (Item D) */}
+                    <div className="p-3 bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-xl border border-slate-200/90 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-blue-600" />
+                          Capacidade de Execução ({dashboardMes === "todos" ? "Geral" : MESES_OPCOES.find(m => m.id === dashboardMes)?.mesAbrev})
+                        </span>
+                        {isOperational ? (
+                          <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-teal-100 text-teal-900 border border-teal-300">
+                            Base: 176h/mês
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-900">
+                            Somente Leitura
+                          </span>
+                        )}
+                      </div>
+
+                      {isOperational ? (
+                        <>
+                          <div className="grid grid-cols-3 gap-1.5 text-center">
+                            <div className="bg-white p-1.5 rounded border border-slate-200/80">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase block">Pode Executar</span>
+                              <span className="text-xs font-black text-teal-800">176h</span>
+                            </div>
+                            <div className="bg-white p-1.5 rounded border border-slate-200/80">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase block">Alocado Mês</span>
+                              <span className="text-xs font-black text-[#15365C]">{horasDemandadasColabMes}h</span>
+                            </div>
+                            <div className="bg-white p-1.5 rounded border border-slate-200/80">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase block">Saldo Livre</span>
+                              <span className={`text-xs font-black ${saldoHorasColab >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                                {saldoHorasColab > 0 ? `+${saldoHorasColab}h` : `${saldoHorasColab}h`}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 pt-0.5">
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-slate-500 font-semibold">Jornada CLT: 8h/dia • 44h/semana</span>
+                              <span className={`font-black ${percOcupacaoColab > 100 ? "text-rose-600" : percOcupacaoColab > 80 ? "text-amber-700" : "text-emerald-700"}`}>
+                                {percOcupacaoColab}% ocupação
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`h-1.5 transition-all ${
+                                  percOcupacaoColab > 100 ? "bg-rose-600" : percOcupacaoColab > 80 ? "bg-amber-500" : "bg-emerald-600"
+                                }`}
+                                style={{ width: `${Math.min(100, percOcupacaoColab)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="p-2 bg-white rounded border border-purple-100 text-[11px] text-purple-900 leading-tight">
+                          Membro com perfil executivo de diretoria. Não participa da grade de capacidade operacional de 44h.
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2 text-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                       <div>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Frentes</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Frentes Totais</span>
                         <span className="text-sm font-black text-[#15365C]">{tarefasColab.length}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Carga Prevista</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Carga Total Projetos</span>
                         <span className="text-sm font-black text-amber-700">{totalHorasPrevistas}h</span>
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Empreendimentos ({obrasColab.length}):</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Empreendimentos Ativos ({obrasColab.length}):</span>
                       <div className="flex flex-wrap gap-1">
                         {obrasColab.length > 0 ? (
                           obrasColab.map(obraNome => (
@@ -3302,8 +4640,16 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Navegação Rápida do Cronograma Horizontal */}
+                  {/* Navegação Rápida do Cronograma Horizontal & Salto por Semanas */}
                   <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => scrollGanttToWeek(0)}
+                      className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-700 rounded text-xs font-bold shadow-xs transition"
+                      title="Ir para o início do cronograma (Semana 41 - Out/26)"
+                    >
+                      ⏮ Sem 41
+                    </button>
                     <button
                       type="button"
                       onClick={() => scrollGantt("left")}
@@ -3311,7 +4657,15 @@ export default function App() {
                       title="Rolar cronograma para a esquerda"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" />
-                      <span>Rolar Cronograma</span>
+                      <span>Anterior</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollGanttToWeek(5)}
+                      className="px-2.5 py-1 bg-[#15365C] hover:bg-blue-900 text-amber-300 rounded text-xs font-black shadow-xs transition flex items-center gap-1"
+                      title="Ir para a Semana Atual (Semana 46 - Novembro/26)"
+                    >
+                      <span>📍 Sem 46 (Hoje)</span>
                     </button>
                     <button
                       type="button"
@@ -3319,8 +4673,16 @@ export default function App() {
                       className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 rounded text-xs font-bold shadow-xs transition"
                       title="Rolar cronograma para a direita"
                     >
-                      <span>Rolar Cronograma</span>
+                      <span>Próxima</span>
                       <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollGanttToWeek(17)}
+                      className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-700 rounded text-xs font-bold shadow-xs transition"
+                      title="Ir para o final do cronograma (Semana 06 - Fev/27)"
+                    >
+                      Sem 06 ⏭
                     </button>
                   </div>
 
@@ -3351,104 +4713,225 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Quadro Visual do Cronograma de Gantt com Barra de Rolagem Horizontal */}
-            <div 
-              ref={ganttScrollRef}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 overflow-x-auto space-y-4 scroll-smooth"
-            >
-              <div className="min-w-[1700px] space-y-3">
-                <div className="flex items-center text-[11px] font-bold text-slate-600 uppercase pb-2 border-b border-slate-200">
-                  <div className="w-[360px] min-w-[360px] flex-shrink-0 sticky left-0 bg-white z-20 pr-4 text-left font-black text-[#15365C]">
-                    Obra & Atividade Técnica
-                  </div>
-                  <div 
-                    className="flex-1 grid gap-1 text-center"
-                    style={{ gridTemplateColumns: `repeat(${ganttWeeks.length}, minmax(75px, 1fr))` }}
-                  >
-                    {ganttWeeks.map(w => (
-                      <div key={w.sem} className="bg-slate-50 py-1.5 px-0.5 rounded border border-slate-100 min-w-[75px]">
-                        <span className="block leading-tight text-[#15365C] font-bold">
-                          {ganttHeaderMode === "semanas" ? w.sem : w.dates.split(" a ")[0]}
-                        </span>
-                        <span className="text-[9px] text-slate-400 block font-normal truncate">
-                          {ganttHeaderMode === "semanas" ? w.dates : `a ${w.dates.split(" a ")[1]}`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+              {/* Barra de Linha do Tempo e Controle Deslizante de Semanas */}
+              <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span className="font-black text-[#15365C] uppercase text-[11px] tracking-wider flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    Linha do Tempo:
+                  </span>
+                  <span className="font-semibold text-slate-500">18 Semanas Completas (05/10/2026 a 07/02/2027)</span>
+                  <span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
+                    Sem 46: Semana Vigente
+                  </span>
                 </div>
 
-                {atividades
-                  .filter(a => ganttObraFilter === "Todas" || a.obraNome === ganttObraFilter)
-                  .slice(0, 45)
-                  .map(act => {
-                    // Posicionamento e largura reais baseados no calendário completo de 18 semanas (Out/26 a Fev/27)
-                    const timelineStart = new Date("2026-10-05T00:00:00").getTime();
-                    const timelineEnd = new Date("2027-02-07T23:59:59").getTime();
-                    const timelineDuration = timelineEnd - timelineStart;
+                <div className="flex items-center gap-3 flex-1 max-w-md">
+                  <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">Sem 41 (Out)</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={ganttScrollPercent}
+                    onChange={(e) => scrollGanttToPercent(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#15365C]"
+                    title="Arraste para navegar rapidamente entre as 18 semanas do cronograma"
+                  />
+                  <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">Sem 06 (Fev)</span>
+                </div>
+              </div>
+            </div>
 
-                    const actStart = act.inicioPrevisto ? new Date(act.inicioPrevisto + "T00:00:00").getTime() : timelineStart;
-                    const actEnd = act.terminoPrevisto ? new Date(act.terminoPrevisto + "T23:59:59").getTime() : (actStart + ((act.dias || 14) * 86400000));
-
-                    const leftPercent = Math.max(0, Math.min(97, ((actStart - timelineStart) / timelineDuration) * 100));
-                    const rawWidth = ((actEnd - actStart) / timelineDuration) * 100;
-                    const widthPercent = Math.max(3, Math.min(100 - leftPercent, rawWidth));
-
-                    return (
-                      <div key={act.id} className="flex items-center text-xs py-2 border-b border-slate-100 hover:bg-slate-50/70 transition group">
-                        <div className="w-[360px] min-w-[360px] flex-shrink-0 sticky left-0 bg-white group-hover:bg-slate-50/90 z-10 pr-4 font-semibold text-[#15365C] border-r border-slate-100">
-                          <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <span className="font-black text-[10px] text-slate-500 uppercase tracking-wider truncate">{act.obraNome}</span>
-                            <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-mono flex-shrink-0">
-                              {(act.dias || 14) * 10}h
-                            </span>
-                          </div>
-                          <div className="font-bold text-xs text-[#15365C] leading-snug break-words">
-                            {act.atividade}
-                          </div>
-                          <div className="text-[10px] text-slate-400 flex items-center justify-between mt-1">
-                            <span className="truncate">Líder: <strong className="text-slate-600">{act.resp1}</strong></span>
-                            <span className="font-mono text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded flex-shrink-0">{act.dias} dias</span>
-                          </div>
+            {/* Quadro Visual do Cronograma de Gantt com Barra de Rolagem Horizontal Técnica Sempre Visível */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+              <div 
+                ref={ganttScrollRef}
+                onScroll={handleGanttScrollEvent}
+                className="custom-gantt-scroll p-4 max-h-[72vh] overflow-y-auto overflow-x-auto space-y-4 scroll-smooth"
+              >
+                <div className="min-w-[1850px] space-y-3">
+                  <div className="flex items-center text-[11px] font-bold text-slate-600 uppercase pb-2 border-b border-slate-200 sticky top-0 bg-white z-30 shadow-xs">
+                    <div className="w-[360px] min-w-[360px] md:w-[420px] md:min-w-[420px] lg:w-[460px] lg:min-w-[460px] 2xl:w-[520px] 2xl:min-w-[520px] flex-shrink-0 sticky left-0 bg-white z-40 pr-4 text-left font-black text-[#15365C] border-r-2 border-slate-200 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.06)]">
+                      Obra & Atividade Técnica
+                    </div>
+                    <div 
+                      className="flex-1 grid gap-1 text-center pl-3"
+                      style={{ gridTemplateColumns: `repeat(${ganttWeeks.length}, minmax(75px, 1fr))` }}
+                    >
+                      {ganttWeeks.map(w => (
+                        <div 
+                          key={w.sem} 
+                          className={`py-1.5 px-0.5 rounded border min-w-[75px] transition ${
+                            w.sem === "Sem 46" ? "bg-amber-100 border-amber-300 ring-2 ring-amber-400/50" : "bg-slate-50 border-slate-100"
+                          }`}
+                        >
+                          <span className={`block leading-tight font-black ${
+                            w.sem === "Sem 46" ? "text-amber-900" : "text-[#15365C]"
+                          }`}>
+                            {ganttHeaderMode === "semanas" ? w.sem : w.dates.split(" a ")[0]}
+                          </span>
+                          <span className="text-[9px] text-slate-400 block font-normal truncate">
+                            {ganttHeaderMode === "semanas" ? w.dates : `a ${w.dates.split(" a ")[1]}`}
+                          </span>
                         </div>
+                      ))}
+                    </div>
+                  </div>
 
-                        <div className="flex-1 pl-3 min-w-[1350px] relative">
-                          <div className="bg-slate-100 rounded-lg h-7 relative overflow-hidden flex items-center border border-slate-200/50">
-                            {/* Grid vertical de fundo para marcação das 18 semanas */}
-                            <div 
-                              className="absolute inset-0 grid pointer-events-none opacity-20"
-                              style={{ gridTemplateColumns: `repeat(${ganttWeeks.length}, minmax(75px, 1fr))` }}
-                            >
-                              {ganttWeeks.map((_, i) => (
-                                <div key={i} className="border-r border-slate-400 h-full" />
-                              ))}
-                            </div>
+                  {atividades
+                    .filter(a => ganttObraFilter === "Todas" || a.obraNome === ganttObraFilter)
+                    .slice(0, 45)
+                    .map(act => {
+                      // Posicionamento e largura reais baseados no calendário completo de 18 semanas (Out/26 a Fev/27) - Proteção contra NaN
+                      const timelineStart = new Date("2026-10-05T00:00:00").getTime();
+                      const timelineEnd = new Date("2027-02-07T23:59:59").getTime();
+                      const timelineDuration = timelineEnd - timelineStart;
 
-                            <div
-                              className="absolute h-full rounded-md shadow-xs overflow-hidden flex items-center transition-all bg-slate-200"
-                              style={{
-                                left: `${leftPercent}%`,
-                                width: `${widthPercent}%`
-                              }}
-                              title={`${act.atividade} (${act.inicioPrevisto} a ${act.terminoPrevisto}) • Progresso: ${act.percentual}%`}
-                            >
-                              <div
-                                className={`h-full transition-all ${
-                                  act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-[#15365C]" : "bg-slate-400"
-                                }`}
-                                style={{ width: `${act.percentual}%` }}
-                              />
-                              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-xs px-1 select-none whitespace-nowrap">
-                                {act.percentual}%
+                      let actStart = timelineStart;
+                      if (act.inicioPrevisto) {
+                        const parsed = new Date(act.inicioPrevisto + "T00:00:00").getTime();
+                        if (!isNaN(parsed)) actStart = parsed;
+                      }
+
+                      let actEnd = actStart + ((Number(act.dias) || 14) * 86400000);
+                      if (act.terminoPrevisto) {
+                        const parsed = new Date(act.terminoPrevisto + "T23:59:59").getTime();
+                        if (!isNaN(parsed)) actEnd = parsed;
+                      }
+
+                      const leftPercent = Math.max(0, Math.min(97, ((actStart - timelineStart) / timelineDuration) * 100));
+                      const rawWidth = ((actEnd - actStart) / timelineDuration) * 100;
+                      const widthPercent = Math.max(3, Math.min(100 - leftPercent, rawWidth));
+
+                      return (
+                        <div key={act.id} className="flex items-center text-xs py-2.5 border-b border-slate-100 hover:bg-slate-50/70 transition group">
+                          <div className="w-[360px] min-w-[360px] md:w-[420px] md:min-w-[420px] lg:w-[460px] lg:min-w-[460px] 2xl:w-[520px] 2xl:min-w-[520px] flex-shrink-0 sticky left-0 bg-white group-hover:bg-slate-50/95 z-20 pr-4 font-semibold text-[#15365C] border-r-2 border-slate-200 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.06)]">
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <span className="font-black text-[10px] text-slate-700 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                {act.obraNome}
+                              </span>
+                              <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-mono flex-shrink-0">
+                                {(act.dias || 14) * 10}h
                               </span>
                             </div>
+                            <div className="font-bold text-xs sm:text-[13px] text-[#15365C] leading-snug break-words whitespace-normal">
+                              {act.atividade}
+                            </div>
+                            <div className="text-[10px] text-slate-400 flex items-center justify-between mt-1.5">
+                              <span>
+                                Líder: {act.resp1 === "A Definir" || !act.resp1 ? (
+                                  <strong className="text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 text-[10px] inline-flex items-center gap-0.5">⚠️ A Definir</strong>
+                                ) : (
+                                  <strong className="text-slate-700">{act.resp1}</strong>
+                                )}
+                              </span>
+                              <span className="font-mono text-[9px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0 font-semibold">{act.dias} dias</span>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 pl-4 min-w-[1350px] relative">
+                            <div className="bg-slate-100 rounded-lg h-7 relative overflow-hidden flex items-center border border-slate-200/50">
+                              {/* Grid vertical de fundo para marcação das 18 semanas */}
+                              <div 
+                                className="absolute inset-0 grid pointer-events-none opacity-20"
+                                style={{ gridTemplateColumns: `repeat(${ganttWeeks.length}, minmax(75px, 1fr))` }}
+                              >
+                                {ganttWeeks.map((_, i) => (
+                                  <div key={i} className="border-r border-slate-400 h-full" />
+                                ))}
+                              </div>
+
+                              <div
+                                className="absolute h-full rounded-md shadow-xs overflow-hidden flex items-center transition-all bg-slate-200"
+                                style={{
+                                  left: `${leftPercent}%`,
+                                  width: `${widthPercent}%`
+                                }}
+                                title={`${act.atividade} (${act.inicioPrevisto} a ${act.terminoPrevisto}) • Progresso: ${act.percentual}%`}
+                              >
+                                <div
+                                  className={`h-full transition-all ${
+                                    act.percentual >= 100 ? "bg-emerald-600" : act.percentual > 0 ? "bg-[#15365C]" : "bg-slate-400"
+                                  }`}
+                                  style={{ width: `${act.percentual}%` }}
+                                />
+                                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-xs px-1 select-none whitespace-nowrap">
+                                  {act.percentual}%
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* DOCK FIXO DE ROLAGEM HORIZONTAL TÉCNICA - SEMPRE VISÍVEL NA BASE */}
+              <div className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t-2 border-slate-300 p-3 z-30 shadow-lg flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-[#15365C] flex items-center gap-1.5 uppercase tracking-wide">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    Barra de Rolagem das Semanas:
+                  </span>
+                  <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">
+                    (Sem 41 a Sem 06 • Arraste ou use os botões)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-1 max-w-xl mx-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollGantt("left")}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#15365C] rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs border border-slate-200"
+                    title="Rolar para a esquerda"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Esquerda</span>
+                  </button>
+                  <div className="flex-1 flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-400">Sem 41</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={ganttScrollPercent}
+                      onChange={(e) => scrollGanttToPercent(Number(e.target.value))}
+                      className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#15365C]"
+                      title="Arraste para rolar o cronograma horizontalmente entre todas as semanas"
+                    />
+                    <span className="text-[10px] font-bold text-slate-400">Sem 06</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => scrollGantt("right")}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#15365C] rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs border border-slate-200"
+                    title="Rolar para a direita"
+                  >
+                    <span>Direita</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollGanttToWeek(5)}
+                    className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-lg text-xs font-black transition shadow-xs flex items-center gap-1"
+                    title="Ir para a Semana Vigente (Semana 46)"
+                  >
+                    📍 Sem 46 (Hoje)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollGanttToWeek(17)}
+                    className="px-3 py-1.5 bg-[#15365C] hover:bg-blue-900 text-white rounded-lg text-xs font-bold transition shadow-xs"
+                    title="Ir para o final do cronograma (Semana 06 - Fevereiro/27)"
+                  >
+                    Sem 06 ⏭
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -4029,16 +5512,15 @@ export default function App() {
                 <label className="font-bold text-slate-700 block">Equipe Alocada (Até 3 Profissionais)</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold block mb-0.5">Titular (Líder) *</span>
+                    <span className="text-[10px] text-slate-500 font-bold block mb-0.5">Titular (Líder)</span>
                     <select
-                      required
-                      value={editingTask.resp1}
+                      value={editingTask.resp1 || "A Definir"}
                       onChange={(e) => setEditingTask(prev => ({ ...prev, resp1: e.target.value }))}
-                      className="w-full p-2 border rounded-lg font-bold text-[#15365C]"
+                      className="w-full p-2 border rounded-lg font-bold text-[#15365C] bg-amber-50/50"
                     >
-                      <option value="">Selecione...</option>
-                      {equipe.map(u => (
-                        <option key={u.id} value={u.nome}>{u.nome}</option>
+                      <option value="A Definir">⚠️ (A Definir / Sem Vínculo)</option>
+                      {equipe.filter(u => u.role !== "Visualizador").map(u => (
+                        <option key={u.id} value={u.nome}>{u.nome} ({u.role})</option>
                       ))}
                     </select>
                   </div>
@@ -4161,20 +5643,165 @@ export default function App() {
             </div>
 
             <form onSubmit={handleSaveTimeEntry} className="space-y-4 text-xs">
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <span className="font-bold text-[#15365C] block">{activeTaskForTime.obraNome}</span>
-                <span className="text-slate-700 block">{activeTaskForTime.atividade}</span>
+              {/* Seleção ou Visualização da Obra e Atividade */}
+              <div className="space-y-2 p-3 bg-blue-50/70 border border-blue-100 rounded-xl">
+                <div>
+                  <label className="font-bold text-[#15365C] block mb-1">Empreendimento / Obra</label>
+                  <select
+                    value={activeTaskForTime.obraNome}
+                    onChange={(e) => {
+                      const selectedObraNome = e.target.value;
+                      const obraTasks = atividades.filter(a => a.obraNome === selectedObraNome);
+                      setActiveTaskForTime({
+                        id: obraTasks[0]?.id || 0,
+                        obraNome: selectedObraNome,
+                        atividade: obraTasks[0]?.atividade || "",
+                        percentual: obraTasks[0]?.percentual || 0
+                      });
+                    }}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-bold text-[#15365C]"
+                  >
+                    {obras.map(o => (
+                      <option key={o.id} value={o.nome}>{o.nome} ({o.cliente})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Frente Técnica / Atividade</label>
+                  <select
+                    value={activeTaskForTime.atividade}
+                    onChange={(e) => {
+                      const selectedActNome = e.target.value;
+                      const matched = atividades.find(a => a.obraNome === activeTaskForTime.obraNome && a.atividade === selectedActNome);
+                      setActiveTaskForTime(prev => ({
+                        ...prev,
+                        id: matched?.id || 0,
+                        atividade: selectedActNome,
+                        percentual: matched?.percentual || 0
+                      }));
+                    }}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold text-slate-800"
+                  >
+                    {atividades
+                      .filter(a => a.obraNome === activeTaskForTime.obraNome)
+                      .map(a => (
+                        <option key={a.id} value={a.atividade}>
+                          {a.atividade} ({a.fase} - {a.percentual}%)
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {isCoordinator && (
+                  <div>
+                    <label className="font-bold text-amber-900 block mb-1">Profissional / Colaborador</label>
+                    <select
+                      value={newTimeEntry.colaboradorNome || currentUser?.nome}
+                      onChange={(e) => {
+                        const colabName = e.target.value;
+                        const colab = equipe.find(u => u.nome === colabName);
+                        setNewTimeEntry(prev => ({
+                          ...prev,
+                          colaboradorNome: colabName,
+                          colaboradorId: colab?.id || currentUser?.id
+                        }));
+                      }}
+                      className="w-full p-2 border border-amber-300 rounded-lg bg-amber-50/70 font-bold text-[#15365C]"
+                    >
+                      {equipe.map(u => (
+                        <option key={u.id} value={u.nome}>{u.nome} ({u.role})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Data do Serviço</label>
+              {/* Data do Serviço com Botões de Acesso Rápido a Dias Anteriores */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700">Data do Serviço Realizado</label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setNewTimeEntry(prev => ({ ...prev, data: getRelativeDateStr(0) }))}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                        newTimeEntry.data === getRelativeDateStr(0)
+                          ? "bg-[#15365C] text-white border-[#15365C] shadow-xs"
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                      }`}
+                    >
+                      Hoje
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewTimeEntry(prev => ({ ...prev, data: getRelativeDateStr(1) }))}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                        newTimeEntry.data === getRelativeDateStr(1)
+                          ? "bg-[#15365C] text-white border-[#15365C] shadow-xs"
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                      }`}
+                    >
+                      Ontem
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewTimeEntry(prev => ({ ...prev, data: getRelativeDateStr(2) }))}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                        newTimeEntry.data === getRelativeDateStr(2)
+                          ? "bg-[#15365C] text-white border-[#15365C] shadow-xs"
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                      }`}
+                    >
+                      Anteontem
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="date"
                   required
                   value={newTimeEntry.data}
                   onChange={(e) => setNewTimeEntry(prev => ({ ...prev, data: e.target.value }))}
-                  className="w-full p-2.5 border rounded-lg"
+                  className="w-full p-2.5 border rounded-lg font-semibold text-slate-800 focus:ring-2 focus:ring-[#15365C]"
                 />
+                <span className="text-[10px] text-slate-400 block italic">
+                  * Você pode apontar horas de qualquer dia anterior selecionando a data no calendário acima.
+                </span>
+              </div>
+
+              {/* Presets Rápidos de Período / Turno */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">Atalhos de Turno / Período:</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setNewTimeEntry(prev => ({ ...prev, horaInicio: "08:00", horaFim: "12:00", intervaloMin: 0 }))}
+                    className="p-1.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-[#15365C] border border-slate-200 text-[10px] font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    🌅 Manhã (4h)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewTimeEntry(prev => ({ ...prev, horaInicio: "13:00", horaFim: "17:00", intervaloMin: 0 }))}
+                    className="p-1.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-[#15365C] border border-slate-200 text-[10px] font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    ☀️ Tarde (4h)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewTimeEntry(prev => ({ ...prev, horaInicio: "17:00", horaFim: "20:00", intervaloMin: 0 }))}
+                    className="p-1.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-[#15365C] border border-slate-200 text-[10px] font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    🌙 Extra (3h)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewTimeEntry(prev => ({ ...prev, horaInicio: "08:00", horaFim: "18:00", intervaloMin: 60 }))}
+                    className="p-1.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-[#15365C] border border-slate-200 text-[10px] font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    📅 Integral (9h)
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -4185,7 +5812,7 @@ export default function App() {
                     required
                     value={newTimeEntry.horaInicio}
                     onChange={(e) => setNewTimeEntry(prev => ({ ...prev, horaInicio: e.target.value }))}
-                    className="w-full p-2.5 border rounded-lg"
+                    className="w-full p-2.5 border rounded-lg font-bold text-slate-800"
                   />
                 </div>
                 <div>
@@ -4195,22 +5822,71 @@ export default function App() {
                     required
                     value={newTimeEntry.horaFim}
                     onChange={(e) => setNewTimeEntry(prev => ({ ...prev, horaFim: e.target.value }))}
-                    className="w-full p-2.5 border rounded-lg"
+                    className="w-full p-2.5 border rounded-lg font-bold text-slate-800"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Intervalo de Almoço (minutos)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="15"
-                  value={newTimeEntry.intervaloMin}
-                  onChange={(e) => setNewTimeEntry(prev => ({ ...prev, intervaloMin: Number(e.target.value) }))}
-                  className="w-full p-2.5 border rounded-lg"
-                />
+              <div className="flex items-center justify-between gap-3 p-2.5 bg-slate-50 border rounded-lg">
+                <div className="flex-1">
+                  <label className="font-bold text-slate-700 block text-[11px] mb-0.5">Intervalo de Almoço (min)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="15"
+                    value={newTimeEntry.intervaloMin}
+                    onChange={(e) => setNewTimeEntry(prev => ({ ...prev, intervaloMin: Number(e.target.value) }))}
+                    className="w-full p-1.5 border rounded font-semibold text-slate-800"
+                  />
+                </div>
+                <div className="text-right flex-shrink-0 pl-3 border-l border-slate-200">
+                  <span className="text-[10px] text-slate-500 font-bold block uppercase">Total deste Lançamento</span>
+                  <span className="text-base font-black text-emerald-700 font-mono">
+                    {(() => {
+                      const [hI, mI] = (newTimeEntry.horaInicio || "08:00").split(":").map(Number);
+                      const [hF, mF] = (newTimeEntry.horaFim || "18:00").split(":").map(Number);
+                      let diffMin = ((hF * 60) + mF) - ((hI * 60) + mI) - (Number(newTimeEntry.intervaloMin) || 0);
+                      if (diffMin <= 0) diffMin = 60;
+                      return `${Math.round((diffMin / 60) * 10) / 10}h`;
+                    })()}
+                  </span>
+                </div>
               </div>
+
+              {/* Resumo de outros projetos apontados no mesmo dia pelo profissional */}
+              {(() => {
+                const targetColab = newTimeEntry.colaboradorNome || currentUser?.nome;
+                const sameDayEntries = bancoHoras.filter(b => b.data === newTimeEntry.data && (b.colaboradorNome === targetColab));
+                const totalSameDay = Math.round(sameDayEntries.reduce((acc, curr) => acc + (curr.totalHoras || 0), 0) * 10) / 10;
+                
+                return (
+                  <div className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg space-y-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-amber-900">
+                      <span>Projetos apontados em {newTimeEntry.data}:</span>
+                      <span className="px-1.5 py-0.2 bg-amber-200/70 rounded text-[10px] font-mono">
+                        {totalSameDay}h acumuladas ({sameDayEntries.length} {sameDayEntries.length === 1 ? "frente" : "frentes"})
+                      </span>
+                    </div>
+                    {sameDayEntries.length > 0 ? (
+                      <div className="space-y-0.5 pt-1">
+                        {sameDayEntries.map(entry => (
+                          <div key={entry.id} className="text-[10px] text-amber-800 flex items-center justify-between border-b border-amber-100 last:border-none pb-0.5">
+                            <span className="truncate max-w-[220px]">📍 <strong>{entry.obraNome}</strong>: {entry.atividadeNome}</span>
+                            <span className="font-mono flex-shrink-0">{entry.horaInicio} às {entry.horaFim} ({entry.totalHoras}h)</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-amber-700 italic block">
+                        Nenhum outro apontamento registrado para {targetColab?.split(" ")[0]} nesta data ainda.
+                      </span>
+                    )}
+                    <span className="text-[9px] text-amber-600 block italic pt-0.5">
+                      ✓ Profissionais podem cadastrar múltiplos horários em obras diferentes no mesmo dia livremente.
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Descrição das Atividades Executadas</label>
