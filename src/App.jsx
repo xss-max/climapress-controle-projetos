@@ -146,6 +146,16 @@ const Copy = ({ className = "w-4 h-4" }) => (
     <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
   </svg>
 );
+const Mail = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+  </svg>
+);
+const Send = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+  </svg>
+);
 const BarChart2 = ({ className = "w-4 h-4" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>
@@ -195,278 +205,77 @@ const ClimapressLogo = ({ className = "h-10 w-auto" }) => (
   </svg>
 );
 
-// --- INITIAL DATA: EQUIPE ESTATÍSTICA COM TODOS OS NÍVEIS DE GERENCIAMENTO ---
+// --- TAREFAS PADRÕES DA CLIMAPRESS LANÇADAS AUTOMATICAMENTE AO INCLUIR UMA OBRA ---
+const DEFAULT_OBRA_TASKS = [
+  { atividade: "Projeto de rede de dutos", fase: "Projetos", dias: 10 },
+  { atividade: "Projeto de hidráulica", fase: "Projetos", dias: 10 },
+  { atividade: "Projeto de difusão", fase: "Projetos", dias: 8 },
+  { atividade: "Projeto de elétrica", fase: "Projetos", dias: 8 },
+  { atividade: "Projeto de automação", fase: "Projetos", dias: 8 },
+  { atividade: "Solicitação de Ventiladores", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de Chiller's", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de bombas", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação Fancoil / AHU", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de Fancoletes", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de equipamentos do sistema VRF Evap + Cond", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de Válvulas de controle", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de QE", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de Variadores de frequência/soft start", fase: "Suprimentos", dias: 5 },
+  { atividade: "Solicitação de tubulação hidráulica e Isolamento térmico", fase: "Suprimentos", dias: 7 },
+  { atividade: "Solicitação de rede de dutos e isolamento térmico", fase: "Suprimentos", dias: 7 },
+  { atividade: "Solicitação tubulação de cobre e isolamento térmico", fase: "Suprimentos", dias: 7 },
+  { atividade: "Solicitação de start up de equipamentos e sistemas", fase: "Comissionamento", dias: 6 },
+  { atividade: "Solicitação de comissionamento e TAB", fase: "Comissionamento", dias: 8 },
+  { atividade: "Projeto As Built", fase: "Entrega", dias: 10 },
+  { atividade: "Entrega de Data Book", fase: "Entrega", dias: 5 }
+];
+
+// --- EQUIPE INICIAL REAL: COORDENADOR RESPONSÁVEL ---
 const INITIAL_EQUIPE = [
   {
     id: 1,
     nome: "Engº Murilo Miranda da Silva",
-    email: "murilo.miranda@climapress.com.br",
+    email: "murilo.silva@climapress.com.br",
     fone: "(11) 98765-4321",
     role: "Coordenador",
     senha: "123",
     disponibilidade: "ativo"
-  },
-  {
-    id: 2,
-    nome: "Lucas Gabriel da Silva",
-    email: "lucas.silva@climapress.com.br",
-    fone: "(11) 97123-4567",
-    role: "Colaborador",
-    senha: "123",
-    disponibilidade: "ativo"
-  },
-  {
-    id: 3,
-    nome: "Carlos Eduardo Santos",
-    email: "carlos.santos@climapress.com.br",
-    fone: "(11) 98234-5678",
-    role: "Colaborador",
-    senha: "123",
-    disponibilidade: "ativo"
-  },
-  {
-    id: 4,
-    nome: "Dra. Mariana Costa Mendes",
-    email: "mariana.costa@climapress.com.br",
-    fone: "(11) 99345-6789",
-    role: "Visualizador",
-    senha: "123",
-    disponibilidade: "ativo"
   }
 ];
 
-// --- INITIAL DATA: OBRAS FICTÍCIAS REALISTAS PARA TESTES E DEMONSTRAÇÃO ---
-const INITIAL_OBRAS = [
-  {
-    id: 1,
-    nome: "Sede Corporativa Nubank",
-    cliente: "Nubank S.A.",
-    status: "Ativa"
-  },
-  {
-    id: 2,
-    nome: "Hospital Sírio-Libanês - Bloco E",
-    cliente: "Sociedade Beneficente Sírio-Libanês",
-    status: "Ativa"
-  },
-  {
-    id: 3,
-    nome: "Data Center Santander",
-    cliente: "Banco Santander Brasil",
-    status: "Ativa"
-  }
-];
+// --- BASE DE DADOS LIMPA PARA PRODUÇÃO (SEM DADOS DE TESTE) ---
+const INITIAL_OBRAS = [];
+const INITIAL_ACTIVITIES_LIST = [];
+const INITIAL_TIME_ENTRIES = [];
 
-const INITIAL_ACTIVITIES_LIST = [
-  {
-    id: 1,
-    obraNome: "Sede Corporativa Nubank",
-    atividade: "COMPATIBILIZAÇÃO BIM E MEMORIAL DE CÁLCULO VRF",
-    fase: "Projetos",
-    dias: 10,
-    resp1: "Lucas Gabriel da Silva",
-    resp2: "Engº Murilo Miranda da Silva",
-    resp3: "",
-    percentual: 100,
-    isNA: false,
-    inicioPrevisto: "2026-11-02",
-    terminoPrevisto: "2026-11-12",
-    lastUpdated: "2026-11-12"
-  },
-  {
-    id: 2,
-    obraNome: "Sede Corporativa Nubank",
-    atividade: "INSTALAÇÃO DE REDE FRIGORÍFICA E DRENO - 8º ANDAR",
-    fase: "Tubulação Frigorífica",
-    dias: 15,
-    resp1: "Carlos Eduardo Santos",
-    resp2: "Lucas Gabriel da Silva",
-    resp3: "",
-    percentual: 60,
-    isNA: false,
-    inicioPrevisto: "2026-11-10",
-    terminoPrevisto: "2026-11-25",
-    lastUpdated: "2026-11-12"
-  },
-  {
-    id: 3,
-    obraNome: "Sede Corporativa Nubank",
-    atividade: "MONTAGEM DE DUTOS DE AR E DIFUSORES DE ALTA VAZÃO",
-    fase: "Dutos e Difusores",
-    dias: 12,
-    resp1: "Carlos Eduardo Santos",
-    resp2: "",
-    resp3: "",
-    percentual: 25,
-    isNA: false,
-    inicioPrevisto: "2026-11-15",
-    terminoPrevisto: "2026-11-27",
-    lastUpdated: "2026-11-12"
-  },
-  {
-    id: 4,
-    obraNome: "Sede Corporativa Nubank",
-    atividade: "TESTE DE ESTANQUEIDADE COM NITROGÊNIO E VÁCUO",
-    fase: "Infraestrutura",
-    dias: 5,
-    resp1: "A Definir",
-    resp2: "",
-    resp3: "",
-    percentual: 0,
-    isNA: false,
-    inicioPrevisto: "2026-11-25",
-    terminoPrevisto: "2026-11-30",
-    lastUpdated: "2026-11-10"
-  },
-  {
-    id: 5,
-    obraNome: "Hospital Sírio-Libanês - Bloco E",
-    atividade: "PROJETO EXECUTIVO DE FILTRAGEM HEPA PARA UTI",
-    fase: "Projetos",
-    dias: 14,
-    resp1: "Lucas Gabriel da Silva",
-    resp2: "Engº Murilo Miranda da Silva",
-    resp3: "",
-    percentual: 100,
-    isNA: false,
-    inicioPrevisto: "2026-11-01",
-    terminoPrevisto: "2026-11-15",
-    lastUpdated: "2026-11-12"
-  },
-  {
-    id: 6,
-    obraNome: "Hospital Sírio-Libanês - Bloco E",
-    atividade: "MONTAGEM DE FANCOILS COM VÁLVULAS DE PRESSÃO CONTROLADA",
-    fase: "Infraestrutura",
-    dias: 18,
-    resp1: "Carlos Eduardo Santos",
-    resp2: "Lucas Gabriel da Silva",
-    resp3: "",
-    percentual: 40,
-    isNA: false,
-    inicioPrevisto: "2026-11-12",
-    terminoPrevisto: "2026-11-30",
-    lastUpdated: "2026-11-12"
-  },
-  {
-    id: 7,
-    obraNome: "Hospital Sírio-Libanês - Bloco E",
-    atividade: "COMISSIONAMENTO, BALANCEAMENTO TAB E LAUDO ANVISA",
-    fase: "Comissionamento",
-    dias: 8,
-    resp1: "Engº Murilo Miranda da Silva",
-    resp2: "Lucas Gabriel da Silva",
-    resp3: "",
-    percentual: 0,
-    isNA: false,
-    inicioPrevisto: "2026-12-01",
-    terminoPrevisto: "2026-12-08",
-    lastUpdated: "2026-11-10"
-  },
-  {
-    id: 8,
-    obraNome: "Data Center Santander",
-    atividade: "INFRAESTRUTURA DE ÁGUA GELADA (CHILLERS DE PRECISÃO)",
-    fase: "Tubulação Frigorífica",
-    dias: 20,
-    resp1: "Carlos Eduardo Santos",
-    resp2: "Engº Murilo Miranda da Silva",
-    resp3: "",
-    percentual: 80,
-    isNA: false,
-    inicioPrevisto: "2026-11-05",
-    terminoPrevisto: "2026-11-25",
-    lastUpdated: "2026-11-12"
-  },
-  {
-    id: 9,
-    obraNome: "Data Center Santander",
-    atividade: "INTERLIGAÇÃO DO SISTEMA DE AUTOMAÇÃO BMS E SENSORES",
-    fase: "Elétrica e Automação",
-    dias: 10,
-    resp1: "Lucas Gabriel da Silva",
-    resp2: "",
-    resp3: "",
-    percentual: 30,
-    isNA: false,
-    inicioPrevisto: "2026-11-18",
-    terminoPrevisto: "2026-11-28",
-    lastUpdated: "2026-11-12"
-  }
-];
+// Limpeza única e automática de dados de teste antigos armazenados em localStorage
+if (typeof window !== "undefined") {
+  try {
+    const isCleaned = window.localStorage.getItem("climapress_prod_clean_v28");
+    if (!isCleaned) {
+      window.localStorage.removeItem("climapress_obras");
+      window.localStorage.removeItem("climapress_atividades");
+      window.localStorage.removeItem("climapress_banco_horas");
+      window.localStorage.removeItem("climapress_audit_logs");
+      window.localStorage.removeItem("climapress_obras_excluidas");
 
-const INITIAL_TIME_ENTRIES = [
-  {
-    id: 101,
-    colaboradorId: 2,
-    colaboradorNome: "Lucas Gabriel da Silva",
-    obraNome: "Sede Corporativa Nubank",
-    atividadeNome: "COMPATIBILIZAÇÃO BIM E MEMORIAL DE CÁLCULO VRF",
-    data: "2026-11-10",
-    horaInicio: "08:00",
-    horaFim: "18:00",
-    intervaloMin: 60,
-    totalHoras: 9,
-    descricao: "Finalização do modelo 3D no Revit e compatibilização com vigas estruturais.",
-    status: "Confirmado"
-  },
-  {
-    id: 102,
-    colaboradorId: 3,
-    colaboradorNome: "Carlos Eduardo Santos",
-    obraNome: "Sede Corporativa Nubank",
-    atividadeNome: "INSTALAÇÃO DE REDE FRIGORÍFICA E DRENO - 8º ANDAR",
-    data: "2026-11-11",
-    horaInicio: "07:30",
-    horaFim: "17:30",
-    intervaloMin: 60,
-    totalHoras: 9,
-    descricao: "Brasagem de tubulações de cobre 1.1/8 e isolamento elastomérico Armaflex.",
-    status: "Confirmado"
-  },
-  {
-    id: 103,
-    colaboradorId: 3,
-    colaboradorNome: "Carlos Eduardo Santos",
-    obraNome: "Hospital Sírio-Libanês - Bloco E",
-    atividadeNome: "MONTAGEM DE FANCOILS COM VÁLVULAS DE PRESSÃO CONTROLADA",
-    data: "2026-11-11",
-    horaInicio: "08:00",
-    horaFim: "16:30",
-    intervaloMin: 60,
-    totalHoras: 7.5,
-    descricao: "Içamento dos módulos de fancoil no teto técnico e instalação de coxins antivibratórios.",
-    status: "Confirmado"
-  },
-  {
-    id: 104,
-    colaboradorId: 3,
-    colaboradorNome: "Carlos Eduardo Santos",
-    obraNome: "Data Center Santander",
-    atividadeNome: "INFRAESTRUTURA DE ÁGUA GELADA (CHILLERS DE PRECISÃO)",
-    data: "2026-11-09",
-    horaInicio: "08:00",
-    horaFim: "18:00",
-    intervaloMin: 60,
-    totalHoras: 9,
-    descricao: "Montagem de suportes unistrut e solda em flanges de 4 polegadas.",
-    status: "Confirmado"
-  },
-  {
-    id: 105,
-    colaboradorId: 2,
-    colaboradorNome: "Lucas Gabriel da Silva",
-    obraNome: "Data Center Santander",
-    atividadeNome: "INTERLIGAÇÃO DO SISTEMA DE AUTOMAÇÃO BMS E SENSORES",
-    data: "2026-11-11",
-    horaInicio: "09:00",
-    horaFim: "18:00",
-    intervaloMin: 60,
-    totalHoras: 8,
-    descricao: "Passagem de cabo Modbus e configuração de transdutores de pressão diferencial.",
-    status: "Confirmado"
+      const storedEquipe = window.localStorage.getItem("climapress_equipe");
+      if (storedEquipe) {
+        try {
+          const parsed = JSON.parse(storedEquipe);
+          const onlyRealUsers = Array.isArray(parsed) ? parsed.filter(u =>
+            u.email === "murilo.silva@climapress.com.br" ||
+            u.email === "murilo.miranda@climapress.com.br"
+          ).map(u => ({ ...u, email: "murilo.silva@climapress.com.br" })) : [];
+          window.localStorage.setItem("climapress_equipe", JSON.stringify(onlyRealUsers.length > 0 ? onlyRealUsers : INITIAL_EQUIPE));
+        } catch (e) {}
+      }
+      window.localStorage.setItem("climapress_prod_clean_v28", "true");
+    }
+  } catch (e) {
+    console.warn("Erro ao executar limpeza de dados de teste:", e);
   }
-];
+}
 
 // --- LOCALSTORAGE SAFE HELPERS (BUG-02 RESOLUTION) ---
 const loadStorage = (key, fallback) => {
@@ -482,8 +291,22 @@ const loadStorage = (key, fallback) => {
 
 export default function App() {
   // Global States com Persistência em LocalStorage (BUG-02)
-  const [equipe, setEquipe] = useState(() => loadStorage("climapress_equipe", INITIAL_EQUIPE));
-  const [currentUser, setCurrentUser] = useState(() => loadStorage("climapress_current_user", INITIAL_EQUIPE[0]));
+  const [equipe, setEquipe] = useState(() => {
+    const loaded = loadStorage("climapress_equipe", INITIAL_EQUIPE);
+    return Array.isArray(loaded) ? loaded.map(u => {
+      if (u.email === "murilo.miranda@climapress.com.br") {
+        return { ...u, email: "murilo.silva@climapress.com.br" };
+      }
+      return u;
+    }) : INITIAL_EQUIPE;
+  });
+  const [currentUser, setCurrentUser] = useState(() => {
+    const loaded = loadStorage("climapress_current_user", INITIAL_EQUIPE[0]);
+    if (loaded && loaded.email === "murilo.miranda@climapress.com.br") {
+      return { ...loaded, email: "murilo.silva@climapress.com.br" };
+    }
+    return loaded || INITIAL_EQUIPE[0];
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [currentTab, setCurrentTab] = useState("dashboard"); // dashboard | minhas | gestao_obras | gestao_tarefas | horas | matriz | gantt | meu_perfil
   const [obras, setObras] = useState(() => loadStorage("climapress_obras", INITIAL_OBRAS));
@@ -569,7 +392,7 @@ export default function App() {
   const HORAS_MENSAIS_POR_COLABORADOR = 176; // 44h semanais Time de Projetos x 4 semanas (8h diárias base, sem considerar hora extra)
   const [taskManagerObra, setTaskManagerObra] = useState(() => {
     const loaded = loadStorage("climapress_obras", INITIAL_OBRAS);
-    return loaded[0]?.nome || "Sede Corporativa Nubank";
+    return loaded[0]?.nome || "";
   });
 
   // Sincronização automática de taskManagerObra (BUG-01)
@@ -668,6 +491,15 @@ export default function App() {
     fone: "",
     role: "Colaborador",
     senha: "123"
+  });
+
+  // Modal de Confirmação & Envio de E-mail de Convite
+  const [inviteEmailModal, setInviteEmailModal] = useState({
+    isOpen: false,
+    user: null,
+    subject: "",
+    body: "",
+    copied: false
   });
 
   // Helper de data local (AAAA-MM-DD) sem problemas de fuso horário
@@ -1067,6 +899,49 @@ export default function App() {
     setProfilePassError("");
   };
 
+  // Helper para preparar e encaminhar e-mail corporativo de convite com credenciais
+  const triggerInviteEmail = (targetUser) => {
+    if (!targetUser || !targetUser.email) return;
+    const appUrl = "https://climapress-controle-projetos.vercel.app/";
+    const subject = `[Climapress Obras] Convite de Acesso ao Sistema — ${targetUser.nome}`;
+    const body = `Olá, ${targetUser.nome}!\n\n` +
+      `Você foi convidado(a) para acessar o Sistema Integrado de Gestão de Obras da Climapress Instalações.\n\n` +
+      `Suas credenciais de acesso corporativo:\n` +
+      `--------------------------------------------------\n` +
+      `• Link de Acesso: ${appUrl}\n` +
+      `• E-mail cadastrado: ${targetUser.email}\n` +
+      `• Perfil de Acesso: ${targetUser.role}\n` +
+      `• Senha inicial: ${targetUser.senha || "123"}\n` +
+      `--------------------------------------------------\n\n` +
+      `Instruções para o primeiro acesso:\n` +
+      `1. Acesse o sistema pelo link acima no seu navegador (Google Chrome ou Microsoft Edge).\n` +
+      `2. Insira seu e-mail corporativo (${targetUser.email}) e a senha inicial informada.\n` +
+      `3. Recomendamos alterar sua senha no menu "Meu Perfil" após o primeiro login.\n\n` +
+      `Em caso de dúvidas técnicas ou alinhamento de frentes, contate a coordenação técnica.`;
+
+    // Disparo imediato via mailto para abrir o cliente de e-mail padrão do sistema (Outlook, Thunderbird, Mail)
+    try {
+      const mailtoUrl = `mailto:${encodeURIComponent(targetUser.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      const mailLink = document.createElement("a");
+      mailLink.href = mailtoUrl;
+      mailLink.target = "_blank";
+      mailLink.rel = "noopener noreferrer";
+      document.body.appendChild(mailLink);
+      mailLink.click();
+      document.body.removeChild(mailLink);
+    } catch (err) {
+      console.warn("Disparo automático de e-mail:", err);
+    }
+
+    setInviteEmailModal({
+      isOpen: true,
+      user: targetUser,
+      subject,
+      body,
+      copied: false
+    });
+  };
+
   // Save or Edit User in Equipe (Liberado apenas para Coordenadores)
   const handleSaveUser = (e) => {
     e.preventDefault();
@@ -1088,7 +963,9 @@ export default function App() {
         senha: editingUser.senha || "123"
       };
       setEquipe(prev => [...prev, newUser]);
-      showFeedback(`Profissional "${newUser.nome}" cadastrado com perfil ${newUser.role}!`);
+      setIsUserModalOpen(false);
+      showFeedback(`Profissional "${newUser.nome}" cadastrado! E-mail de convite preparado.`);
+      triggerInviteEmail(newUser);
     } else {
       const oldUser = equipe.find(u => u.id === editingUser.id);
       const newName = editingUser.nome.trim();
@@ -1452,9 +1329,34 @@ export default function App() {
         cliente: editingObra.cliente.trim(),
         status: editingObra.status || "Ativa"
       };
+
+      // Geração automática das 21 tarefas padrões da Climapress
+      const todayStr = getRelativeDateStr(0);
+      let runningTaskId = Math.max(...atividades.map(a => a.id), 0);
+      const defaultTasksToInsert = DEFAULT_OBRA_TASKS.map((def) => {
+        runningTaskId += 1;
+        const dias = def.dias || 10;
+        return {
+          id: runningTaskId,
+          obraNome: newObraObj.nome,
+          atividade: def.atividade.toUpperCase(),
+          fase: def.fase || "Projetos",
+          dias: dias,
+          resp1: "A Definir",
+          resp2: "",
+          resp3: "",
+          percentual: 0,
+          isNA: false,
+          inicioPrevisto: todayStr,
+          terminoPrevisto: getRelativeDateStr(-dias),
+          lastUpdated: todayStr
+        };
+      });
+
       setObras(prev => [...prev, newObraObj]);
+      setAtividades(prev => [...prev, ...defaultTasksToInsert]);
       setTaskManagerObra(newObraObj.nome);
-      showFeedback(`Obra "${newObraObj.nome}" cadastrada com sucesso!`);
+      showFeedback(`Obra "${newObraObj.nome}" cadastrada com 21 tarefas padrões lançadas automaticamente!`);
     } else {
       const oldObra = obras.find(o => o.id === editingObra.id);
       if (oldObra && oldObra.nome !== editingObra.nome.trim()) {
@@ -1625,7 +1527,7 @@ export default function App() {
 
   // Abrir modal de apontamento direto (Aba Apontamento de Horas)
   const handleOpenDirectTimeModal = () => {
-    const defaultObra = taskManagerObra || obras[0]?.nome || "Sede Corporativa Nubank";
+    const defaultObra = taskManagerObra || obras[0]?.nome || "";
     const obraTasks = atividades.filter(a => a.obraNome === defaultObra);
     const defaultTask = obraTasks[0] || atividades[0] || null;
 
@@ -2152,7 +2054,8 @@ export default function App() {
     setEquipe(prev => [...prev, newUser]);
     setIsInviteModalOpen(false);
     setInviteData({ nome: "", email: "", fone: "", role: "Colaborador", senha: "123" });
-    showFeedback(`Convite gerado com sucesso! "${newUser.nome}" agora pode acessar como ${newUser.role}.`);
+    showFeedback(`Convite emitido com sucesso! E-mail encaminhado para ${newUser.email}.`);
+    triggerInviteEmail(newUser);
   };
 
   // --- TELA DE LOGIN CORPORATIVA (AUTENTICAÇÃO REAL CLIMAPRESS) ---
@@ -4534,6 +4437,14 @@ export default function App() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
+                            onClick={() => triggerInviteEmail(colab)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                            title="Encaminhar / Reenviar e-mail de convite com credenciais"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleOpenResetUserPassword(colab)}
                             className="p-1 text-amber-600 hover:bg-amber-50 rounded"
                             title="Gerar / Redefinir Senha deste profissional"
@@ -5281,6 +5192,13 @@ export default function App() {
                 />
               </div>
 
+              <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg flex items-center gap-2">
+                <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span className="text-[11px] font-medium leading-tight">
+                  Ao confirmar, o sistema encaminhará automaticamente um e-mail com as credenciais de acesso e instruções para o convidado.
+                </span>
+              </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t">
                 <button
                   type="button"
@@ -5291,12 +5209,121 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#E52329] hover:bg-red-700 text-white rounded-lg font-bold shadow"
+                  className="px-4 py-2 bg-[#E52329] hover:bg-red-700 text-white rounded-lg font-bold shadow flex items-center gap-1.5"
                 >
-                  Confirmar Convite
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Confirmar & Enviar Convite</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: E-MAIL DE CONVITE ENVIADO / ENCAMINHAMENTO        */}
+      {/* ========================================================= */}
+      {inviteEmailModal.isOpen && inviteEmailModal.user && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 animate-fade-in border border-slate-200">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-black text-sm text-[#15365C] uppercase flex items-center gap-2">
+                <Mail className="w-4 h-4 text-emerald-600" />
+                Convite de Acesso Encaminhado
+              </h3>
+              <button
+                type="button"
+                onClick={() => setInviteEmailModal(prev => ({ ...prev, isOpen: false }))}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>E-mail corporativo preparado para {inviteEmailModal.user.nome}!</span>
+              </div>
+              <p className="text-[11px] text-emerald-700">
+                O cliente de e-mail padrão do sistema foi acionado para envio imediato para <strong>{inviteEmailModal.user.email}</strong>.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-700">Prévia do E-mail / Convite:</span>
+                <span className="text-[10px] text-slate-400 font-mono truncate max-w-[200px]" title={inviteEmailModal.subject}>Assunto: {inviteEmailModal.subject}</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] font-mono text-slate-700 whitespace-pre-wrap max-h-48 overflow-y-auto select-all leading-relaxed">
+                {inviteEmailModal.body}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t">
+              <a
+                href={`mailto:${encodeURIComponent(inviteEmailModal.user.email)}?subject=${encodeURIComponent(inviteEmailModal.subject)}&body=${encodeURIComponent(inviteEmailModal.body)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 bg-[#15365C] hover:bg-blue-900 text-white rounded-lg text-xs font-bold transition text-center"
+              >
+                <Mail className="w-3.5 h-3.5 text-amber-300" />
+                <span>Abrir no E-mail (Outlook/Mail)</span>
+              </a>
+
+              <a
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(inviteEmailModal.user.email)}&su=${encodeURIComponent(inviteEmailModal.subject)}&body=${encodeURIComponent(inviteEmailModal.body)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition text-center"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Abrir no Gmail Web</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    navigator.clipboard.writeText(inviteEmailModal.body);
+                    setInviteEmailModal(prev => ({ ...prev, copied: true }));
+                    setTimeout(() => setInviteEmailModal(prev => ({ ...prev, copied: false })), 2500);
+                  } catch (e) {}
+                }}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 border rounded-lg text-xs font-bold transition text-center ${
+                  inviteEmailModal.copied
+                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                    : "border-slate-300 hover:bg-slate-50 text-slate-700"
+                }`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{inviteEmailModal.copied ? "Texto Copiado!" : "Copiar Texto do Convite"}</span>
+              </button>
+
+              {inviteEmailModal.user.fone && (
+                <a
+                  href={`https://wa.me/55${inviteEmailModal.user.fone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                    `Olá ${inviteEmailModal.user.nome}, segue o seu convite de acesso ao Sistema Integrado de Obras da Climapress:\n\n${inviteEmailModal.body}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition text-center"
+                >
+                  <Send className="w-3.5 h-3.5 text-white" />
+                  <span>Enviar via WhatsApp</span>
+                </a>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => setInviteEmailModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-5 py-2 bg-[#E52329] hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow"
+              >
+                Concluir
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -26,14 +26,11 @@ O aplicativo estará disponível em:
 
 ---
 
-## 👥 Níveis de Acesso e Credenciais de Teste
+## 👥 Acesso Coordenador Principal
 
 | Perfil | Nome do Usuário | E-mail de Login | Senha Padrão | Escopo de Acesso |
 |:---|:---|:---|:---:|:---|
-| **Coordenador** | Engº Murilo Miranda da Silva | `murilo.miranda@climapress.com.br` | `123` | Acesso pleno a todas as 8 abas, gestão de obras, tarefas, equipe, reset de senhas e auditoria. |
-| **Colaborador** | Lucas Gabriel da Silva (Projetista) | `lucas.silva@climapress.com.br` | `123` | Painel operacional, apontamento de horas em campo e controle de suas frentes técnicas. |
-| **Colaborador** | Carlos Eduardo Santos (Encarregado) | `carlos.santos@climapress.com.br` | `123` | Apontamento de horas, atualização de progresso de instalações e cômputo conjunto. |
-| **Visualizador** | Dra. Mariana Costa Mendes (Diretoria) | `mariana.costa@climapress.com.br` | `123` | Modo leitura em todas as telas executivas, relatórios e cronograma de Gantt. |
+| **Coordenador** | Engº Murilo Miranda da Silva | `murilo.silva@climapress.com.br` | `123` | Acesso pleno a todas as abas, gestão de obras, tarefas, equipe, reset de senhas e auditoria. |
 
 ---
 
@@ -41,10 +38,10 @@ O aplicativo estará disponível em:
 
 1. **Dashboard Executivo:** Raio-X físico-financeiro consolidado de todas as obras ou por empreendimento específico.
 2. **Minhas Atividades:** Visão operacional de tarefas atribuídas com controle conjunto de horas por equipe.
-3. **Gestão de Obras:** Cadastro contratual com exclusão protegida por senha de coordenador e rastreamento em auditoria.
-4. **Gestão de Tarefas:** Planejamento por fases (Projetos, Tubulação, Dutos, Elétrica, Comissionamento) e cálculo de carga horária (10h/dia).
+3. **Gestão de Obras & Pacote Padrão de Tarefas:** Cadastro de novas obras com **lançamento automático das 21 tarefas técnicas e de suprimentos oficiais da Climapress**.
+4. **Gestão de Tarefas:** Planejamento por fases (Projetos, Suprimentos, Campo, Comissionamento, Entrega) e cálculo de carga horária (10h/dia).
 5. **Apontamento de Horas:** Banco de horas com histórico detalhado e cálculo automático de saldo na conclusão (100%).
-6. **Matriz de Alocação:** Gestão da equipe técnica com convites rápidos, geração de senhas seguras e redefinição administrativa.
+6. **Matriz de Alocação & Convites com E-mail:** Gestão da equipe técnica com convites rápidos, disparo automático de e-mail corporativo com credenciais e link oficial (`https://climapress-controle-projetos.vercel.app/`).
 7. **Cronograma de Gantt (ISO):** Linha do tempo proporcional em datas reais com suporte a plotagem em A4, A3, A2, A1 e A0.
 8. **Relatórios Oficiais:** Exportação em PDF com folha timbrada via iframe sem bloqueios, Word com marca d'água e Excel.
 9. **Segurança & Senhas:** Tela de login oficial, renovação de senhas em 3 etapas, gerador corporativo e botão de logout.
@@ -52,15 +49,11 @@ O aplicativo estará disponível em:
 
 ---
 
-## 📝 Histórico de Adequações (Versão 2.6.2)
+## 📝 Histórico de Adequações (Versão 2.7.0 - Produção Oficial)
 
-- **Correção BUG-01:** Sincronização dinâmica de seleção de obras na gestão de tarefas.
-- **Correção BUG-02:** Persistência de dados em `localStorage` com botão `Reset Demo` para restauração rápida.
-- **Correção BUG-03:** Gráfico de Gantt baseado na matemática real de datas do calendário.
-- **Correção BUG-04:** Impressão de PDF via *iframe* isolado para evitar bloqueios de pop-up.
-- **Correção BUG-05:** Reatribuição automática de tarefas sob liderança de colaborador excluído para o Coordenador.
-- **Correção BUG-06:** Estorno automático de horas de conclusão integral ao retroceder o percentual da frente.
-- **Módulo de Senhas:** Gerador de senhas seguras (`generateSecurePassword`), visualizador de senhas com ícone de olho, renovação no perfil com validação da senha atual e confirmação, reset administrativo pelo Coordenador e Tela de Login corporativa com Logout.
+- **Base de Dados Limpa de Produção:** Remoção de todas as obras, atividades e apontamentos fictícios de teste anteriores.
+- **Lançamento Automático de Tarefas Padrões da Climapress:** Ao cadastrar qualquer nova obra, o sistema cria automaticamente o pacote com as 21 tarefas técnicas oficiais (Projetos de Dutos, Hidráulica, Difusão, Elétrica, Automação; Solicitações de Ventiladores, Chillers, Bombas, Fancoil/AHU, Fancoletes, VRF, Válvulas, QE, Variadores, Tubulação/Dutos com isolamento; Start-up, Comissionamento/TAB, As Built e Data Book).
+- **Link Oficial de Produção nos Convites:** Fixado o endereço `https://climapress-controle-projetos.vercel.app/`.
 
 ---
 
