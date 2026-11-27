@@ -245,6 +245,23 @@ const INITIAL_EQUIPE = [
 
 // --- BASE DE DADOS LIMPA PARA PRODUÇÃO (SEM DADOS DE TESTE) ---
 const INITIAL_OBRAS = [];
+
+// --- CARGA INICIAL DE OBRAS (inserida uma única vez, ignora nomes já existentes) ---
+const SEED_OBRAS = [
+  { nome: "Gandini", cliente: "KIA" },
+  { nome: "Cefalosporinicos", cliente: "BLAÚ" },
+  { nome: "ROCKET", cliente: "DAIICHI" },
+  { nome: "NUBANK", cliente: "ATHIE WOHNRATH" },
+  { nome: "CORIMA", cliente: "CRISTÁLIA" },
+  { nome: "JHSF - Reserva Cidade Jardim", cliente: "HTB" },
+  { nome: "Medical Center", cliente: "RACIONAL" },
+  { nome: "ICT", cliente: "BLAÚ" },
+  { nome: "Mormons", cliente: "TEIXEIRA DUARTE" },
+  { nome: "ROCKET 2.5", cliente: "DAIICHI" },
+  { nome: "GTIS", cliente: "RACIONAL" },
+  { nome: "Diversas Instalações", cliente: "Matarazzo - BM" }
+];
+const SEED_OBRAS_FLAG = "climapress_seed_obras_v1";
 const INITIAL_ACTIVITIES_LIST = [];
 const INITIAL_TIME_ENTRIES = [];
 
@@ -339,6 +356,41 @@ export default function App() {
   useEffect(() => {
     try { window.localStorage.setItem("climapress_obras", JSON.stringify(obras)); } catch (e) {}
   }, [obras]);
+
+  // Carga única das obras do SEED_OBRAS (com as 21 tarefas padrões cada)
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(SEED_OBRAS_FLAG)) return;
+      window.localStorage.setItem(SEED_OBRAS_FLAG, "true");
+    } catch (e) { return; }
+    const existentes = new Set(obras.map(o => o.nome.trim().toLowerCase()));
+    const novas = SEED_OBRAS.filter(s => !existentes.has(s.nome.toLowerCase()));
+    if (novas.length === 0) return;
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const hoje = new Date();
+    const todayStr = fmt(hoje);
+    let obraId = Math.max(...obras.map(o => o.id), 0);
+    let taskId = Math.max(...atividades.map(a => a.id), 0);
+    const novasObras = [];
+    const novasTarefas = [];
+    novas.forEach(s => {
+      obraId += 1;
+      novasObras.push({ id: obraId, nome: s.nome, cliente: s.cliente, status: "Ativa" });
+      DEFAULT_OBRA_TASKS.forEach(def => {
+        taskId += 1;
+        const dias = def.dias || 10;
+        const fim = new Date(hoje); fim.setDate(fim.getDate() + dias);
+        novasTarefas.push({
+          id: taskId, obraNome: s.nome, atividade: def.atividade.toUpperCase(),
+          fase: def.fase || "Projetos", dias, resp1: "A Definir", resp2: "", resp3: "",
+          percentual: 0, isNA: false, inicioPrevisto: todayStr, terminoPrevisto: fmt(fim), lastUpdated: todayStr
+        });
+      });
+    });
+    setObras(prev => [...prev, ...novasObras]);
+    setAtividades(prev => [...prev, ...novasTarefas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     try { window.localStorage.setItem("climapress_atividades", JSON.stringify(atividades)); } catch (e) {}
