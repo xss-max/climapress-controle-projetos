@@ -2283,34 +2283,11 @@ export default function App() {
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#15365C] block">
                   Sistema Integrado de Engenharia
                 </span>
-                <span className="text-xs font-semibold text-slate-500">HVAC & Controle Físico-Financeiro</span>
               </div>
             </div>
 
             {/* User profile badge & Global actions */}
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {isCoordinator && (
-                <button
-                  type="button"
-                  onClick={handleResetToDemo}
-                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition active:scale-95"
-                  title="Restaurar toda a base de dados para o padrão oficial de demonstração"
-                >
-                  <RefreshCw className="w-3 h-3 text-rose-500" />
-                  <span>Reset Demo</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleGlobalRefresh}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#15365C] border border-slate-200 rounded-lg text-xs font-bold transition active:scale-95"
-                title="Atualizar dados e recalcular índices"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isRefreshing ? "animate-spin" : ""}`} />
-                <span className="hidden sm:inline">Atualizar</span>
-              </button>
-
               <div
                 onClick={() => setCurrentTab("meu_perfil")}
                 className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer transition shadow-xs"
